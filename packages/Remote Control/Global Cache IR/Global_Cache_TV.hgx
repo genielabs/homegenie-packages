@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-16"?>
+<ProgramBlock xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <ConditionType>OnTrue</ConditionType>
+  <Conditions />
+  <Commands />
+  <ScriptCondition>Program.Setup(()=&gt;{
+        // Create 1 virtual module with the domain "HomeAutomation.TV" and with address from 1 to 1
+        // "Switch" is the type and "homegenie/generic/switch" is the widget to be used to display the virtual module
+        // See directory "html/pages/control/widgets/" for widget list
+        Program.AddVirtualModules("HomeAutomation.TV", "Switch", "homegenie/generic/switch", 1, 1);
+});
+
+// A "return true;" statement at any point of this code block, will cause the program to run.
+// For manually activated program, just leave a "return false" statement here.
+return true;
+</ScriptCondition>
+  <ScriptSource>string tvRemoteOn = "sendir,1:3,1,38343,1,1,170,172,21,65,21,65,21,65,21,22,21,22,21,22,21,22,21,22,21,65,21,65,21,65,21,22,21,22,21,22,21,22,21,22,21,65,21,22,21,22,21,65,21,65,21,22,21,22,21,65,21,22,21,65,21,65,21,22,21,22,21,65,21,65,21,22,21,1788,170,172,21,22,21,4907";
+string tvRemoteOff = "sendir,1:3,1,38343,1,1,170,172,21,65,21,65,21,65,21,22,21,22,21,22,21,22,21,22,21,65,21,65,21,65,21,22,21,22,21,22,21,22,21,22,21,22,21,22,21,22,21,65,21,65,21,22,21,22,21,65,21,65,21,65,21,65,21,22,21,22,21,65,21,65,21,22,21,4907";
+
+// http://&lt;hg_address&gt;/api/HomeAutomation.TV/...
+When.WebServiceCallReceived("HomeAutomation.TV", ( args ) =&gt; 
+{	   
+        string[] reqs = ((string)args).Split('/');
+
+        try
+        {
+                //string domain = reqs[0];
+                string tvModuleNumber = reqs[1];
+                string command = reqs[2];
+
+                var tvModules = Modules.InDomain("HomeAutomation.TV");
+                var tvModule = tvModules.WithAddress(tvModuleNumber).Get();
+          
+          		var globalCacheModuleNumber = "1"; // Setting the Global Cache module number to use in case there is more than one Global Cache device.
+          		var globalCacheModules = Modules.InDomain("HomeAutomation.GlobalCache"); 
+                var globalCacheModule = globalCacheModules.WithAddress(globalCacheModuleNumber).Get();
+          
+                switch(command)
+                {
+                        // eg. http://&lt;hg_address&gt;/api/HomeAutomation.TV/&lt;module_number&gt;/Control.On
+                        case "Control.On":
+                  			Program.RaiseEvent(tvModule, "Status.Level", "1", "TV");
+                            // Send command to Global Cache device to send the required IR code.
+                            globalCacheModule.Command("Control.Send").Set(tvRemoteOn);
+                  		break;
+
+                        // eg. http://&lt;hg_address&gt;/api/HomeAutomation.TV/&lt;module_number&gt;/Control.Off
+                        case "Control.Off":
+                            Program.RaiseEvent(tvModule, "Status.Level", "0", "TV");
+                  			// Send command to Global Cache device to send the required IR code.
+                  			globalCacheModule.Command("Control.Send").Set(tvRemoteOff);   
+                        break;
+                }
+  
+                return "{ 'ResponseValue' : 'OK' }";    
+        }
+
+        catch (Exception e) 
+        { 
+         		 Program.Notify("TV ERROR!", e.Message);
+        }
+
+        return "{ 'ResponseValue' : 'ERROR' }";
+});
+
+
+Program.GoBackground();
+</ScriptSource>
+  <ScriptErrors>[]</ScriptErrors>
+  <Domain>HomeAutomation.HomeGenie.Automation</Domain>
+  <Address>1003</Address>
+  <Name>TV</Name>
+  <Description>TV virtual module. TV IR remote controls from HomeGenie to Global Cache IR blaster devices using tcp messages.</Description>
+  <Group>WarStreet</Group>
+  <Features />
+  <ActivationTime>2015-06-15T16:31:49.014714Z</ActivationTime>
+  <TriggerTime>2015-06-15T16:31:49.256552Z</TriggerTime>
+  <Type>CSharp</Type>
+  <IsEnabled>true</IsEnabled>
+</ProgramBlock>
