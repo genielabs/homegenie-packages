@@ -5,6 +5,7 @@
     "title": "Global Cache IR",
     "description": "Add support for Global Cache IP2IR and WF2IR",
     "published": "2015-06-15T20:39:00Z",
+    "folder_url": "https://raw.githubusercontent.com/genielabs/homegenie-packages/master/packages/Remote Control/Global Cache IR/",
     "widgets": [ ],
     "programs": [
         { 
