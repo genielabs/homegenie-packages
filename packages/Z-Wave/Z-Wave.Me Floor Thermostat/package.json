@@ -1,0 +1,18 @@
+{
+    "author": "Alexander Sidorenko (Bounz)",
+    "version": "v1.0",
+    "title": "Z-Wave.me Thermostat",
+    "description": "Widget for controlling Z-Wave.me Thermostat",
+    "published": "2014-12-07T00:00:00Z",
+    "sourcecode": "",
+    "homepage": "http://www.homegenie.it/forum/index.php?topic=422.0", 
+    "widgets": [ 
+        { 
+            "file": "Bounz_Z-Wave.Me_thermostat.zip",
+            "name":"Z-Wave.me Thermostat",
+            "description": "Widget for controlling Z-Wave.me Thermostat"
+        }
+    ],
+    "programs": [ ],
+    "interfaces": [ ]
+}
