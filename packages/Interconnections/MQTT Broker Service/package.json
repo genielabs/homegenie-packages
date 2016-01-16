@@ -1,0 +1,18 @@
+{
+    "author": "genielabs",
+    "version": "v1.1",
+    "title": "MQTT Broker Service",
+    "description": "Add support for Global Cache IP2IR and WF2IR",
+    "published": "2015-10-16T00:00:00Z",
+    "sourcecode": "https://github.com/genielabs/MIG-MqttBroker",
+    "homepage": "", 
+    "widgets": [ ],
+    "programs": [ ],
+    "interfaces": [ 
+        { 
+            "file": "MIG-MqttBroker_1_1.zip",
+            "name":"MQTT Broker Service",
+            "description": "MQTT Broker Service as MIG Interface"
+        }
+    ]
+}
