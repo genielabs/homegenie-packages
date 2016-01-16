@@ -1,0 +1,26 @@
+{
+    "author": "Daniel Maillard (DaniMail)",
+    "version": "v1.0",
+    "title": "Fibaro RGBW",
+    "description": "Adds ZWave Fibaro RGBWM-441 control capability to HomeGenie",
+    "published": "2014-02-06T00:00:00Z",
+    "sourcecode": "",
+    "homepage": "http://www.homegenie.it/forum/index.php?topic=15.0", 
+    "widgets": [
+        { 
+            "file": "DaniMail_fibaro_rgbw.zip",
+            "name":"Fibaro RGBW",
+            "description": "Widget for controlling Fibaro RGBWM-441"
+        }
+    ],
+    "programs": [
+        { 
+            "file": "Fibaro_RGBW.hgx",
+            "name":"Fibaro RGBW",
+            "description": "Fibaro RGBW driver app",
+            "uid": "100201",
+            "group": "Z-Wave" 
+        }
+    ],
+    "interfaces": [ ]
+}
