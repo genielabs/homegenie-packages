@@ -1,0 +1,20 @@
+{
+    "author": "genielabs",
+    "version": "v1.0",
+    "title": "One-Wire Modules",
+    "description": "One-Wire integration",
+    "published": "2015-02-12T00:00:00Z",
+    "sourcecode": "",
+    "homepage": "", 
+    "widgets": [ ],
+    "programs": [
+        { 
+            "file": "One-Wire_Devices.hgx",
+            "name":"One-Wire Modules",
+            "description": "One-Wire integration",
+            "uid": "100506",
+            "group": "Devices and Things" 
+        }
+    ],
+    "interfaces": [ ]
+}

@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-16"?>
+<ProgramBlock xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <ConditionType>OnTrue</ConditionType>
+  <Conditions />
+  <Commands />
+  <ScriptCondition>Program.AddOption("PingMe.Address1", "", "IP address to ping #1", "text");
+Program.AddOption("PingMe.Address2", "", "IP address to ping #2", "text");
+Program.AddOption("PingMe.Address3", "", "IP address to ping #3", "text");
+
+Program.Parameter("PingMe.AtHome").Value = "1";
+
+Program.Run();
+</ScriptCondition>
+  <ScriptSource>while (Program.IsEnabled)
+{
+  Pause(10);
+
+  var isarmed = (Program.WithName("Security Alarm System").Parameter("HomeGenie.SecurityArmed").Value == "1");
+  if (!isarmed) 
+  {
+    Pause(50);
+    continue;
+  }
+
+  int pinging_buddies = 0;
+  if (Program.Option("PingMe.Address1").Value != "" &amp;&amp; Net.Ping(Program.Option("PingMe.Address1").Value))
+  {
+    pinging_buddies++;
+  }
+  if (Program.Option("PingMe.Address2").Value != "" &amp;&amp; Net.Ping(Program.Option("PingMe.Address2").Value))
+  {
+    pinging_buddies++;
+  }
+  if (Program.Option("PingMe.Address3").Value != "" &amp;&amp; Net.Ping(Program.Option("PingMe.Address3").Value))
+  {
+    pinging_buddies++;
+  }
+
+  if (pinging_buddies &gt; 0 &amp;&amp; Program.Parameter("PingMe.AtHome").Value != "1")
+  {
+    Program.RaiseEvent("PingMe.AtHome", "1", "Ping Me At Home");      
+  }
+  else if (pinging_buddies == 0 &amp;&amp; Program.Parameter("PingMe.AtHome").Value != "0")
+  {
+    Program.RaiseEvent("PingMe.AtHome", "0", "Ping Me At Home");
+  }
+}</ScriptSource>
+  <ScriptErrors>[]</ScriptErrors>
+  <Domain>HomeAutomation.HomeGenie.Automation</Domain>
+  <Address>154</Address>
+  <Name>Ping Me at Home</Name>
+  <Description>If security system is armed, pings your mobile device to determine
+when you're getting close to home.
+The program exposes the parameter &lt;b&gt;PingMe.AtHome&lt;/b&gt;
+that can be used both in Wizard Scripts or C# APPs to
+trigger actions when you get home.</Description>
+  <Group>Security</Group>
+  <Features />
+  <ActivationTime xsi:nil="true" />
+  <TriggerTime xsi:nil="true" />
+  <Type>CSharp</Type>
+  <IsEnabled>false</IsEnabled>
+</ProgramBlock>

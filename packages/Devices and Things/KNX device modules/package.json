@@ -1,0 +1,20 @@
+{
+    "author": "genielabs",
+    "version": "v1.0",
+    "title": "KNX modules",
+    "description": "KNX device modules",
+    "published": "2015-02-12T00:00:00Z",
+    "sourcecode": "",
+    "homepage": "", 
+    "widgets": [ ],
+    "programs": [
+        { 
+            "file": "KNX_Modules.hgx",
+            "name":"KNX modules",
+            "description": "KNX device modules",
+            "uid": "100504",
+            "group": "Devices and Things" 
+        }
+    ],
+    "interfaces": [ ]
+}

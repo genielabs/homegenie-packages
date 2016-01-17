@@ -1,0 +1,20 @@
+{
+    "author": "genielabs",
+    "version": "v1.0",
+    "title": "Ping Me at Home",
+    "description": "Detect user proximity by pinging his mobile device",
+    "published": "2015-02-12T00:00:00Z",
+    "sourcecode": "",
+    "homepage": "", 
+    "widgets": [ ],
+    "programs": [
+        { 
+            "file": "Ping_Me_at_Home.hgx",
+            "name":"Ping Me at Home",
+            "description": "Detect user proximity by pinging his mobile device",
+            "uid": "100508",
+            "group": "Security" 
+        }
+    ],
+    "interfaces": [ ]
+}

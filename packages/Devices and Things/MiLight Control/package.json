@@ -1,0 +1,20 @@
+{
+    "author": "genielabs",
+    "version": "v1.0",
+    "title": "MiLight Control",
+    "description": "Control MiLight and EasyBulb Lights",
+    "published": "2015-02-12T00:00:00Z",
+    "sourcecode": "",
+    "homepage": "", 
+    "widgets": [ ],
+    "programs": [
+        { 
+            "file": "MiLight_Control.hgx",
+            "name":"MiLight Control",
+            "description": "Control MiLight and EasyBulb Lights",
+            "uid": "100505",
+            "group": "Devices and Things" 
+        }
+    ],
+    "interfaces": [ ]
+}

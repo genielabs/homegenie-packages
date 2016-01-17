@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="utf-16"?>
+<ProgramBlock xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <ConditionType>OnTrue</ConditionType>
+  <Conditions />
+  <Commands />
+  <ScriptCondition>Program.AddOption("ModulesCount", "3", "Connected sensors number", "text");
+Program.AddOption("UpdateInterval", "60", "Update interval", "text");
+Program.AddFeature("HomeAutomation.OneWire", "Sensor", "OneWire.DeviceId", "Device ID", "text");
+Program.Run();
+</ScriptCondition>
+  <ScriptSource>// CSharp Automation Program Plugin
+// 1-Wire Sensor Modules
+// NOTE: Currently only temperature sensors are supported
+
+// Read sensor data text lines
+var readSensorData = new Func&lt;string, List&lt;string&gt;&gt;((sensorId) =&gt; {
+  string oneWireSysPath = "/sys/bus/w1/devices/";
+  string currentLine = "";
+  var lines = new List&lt;string&gt;();
+  //lines.Add("7c 01 4b 46 7f ff 04 10 09 : crc=09 YES");
+  //lines.Add("7c 01 4b 46 7f ff 04 10 09 t=23750");
+  try
+  {
+    System.IO.StreamReader file = new System.IO.StreamReader(oneWireSysPath + sensorId + "/w1_slave");
+    while((currentLine = file.ReadLine()) != null)
+    {
+      lines.Add(currentLine);
+    }
+    file.Close();
+  } catch (Exception ex) {
+    Program.Notify("OneWire Error", ex.Message);
+  }
+  return lines;
+});
+
+// Parse data from a 1-wire temperature sensors (DS18B20).
+// It returns decimal value indicating temperature in celsius degree.
+var parseTemperatureData = new Func&lt;List&lt;string&gt;, double&gt;((dataLines) =&gt; {
+  double temperature = 0;
+  foreach(string l in dataLines)
+  {
+    if (l.IndexOf(" t=") &gt; 0)
+    {
+      var ts = l.Substring(l.LastIndexOf(" t=") + 3);
+      temperature = double.Parse(ts) / 1000D;
+    }
+  }
+  return temperature;
+});
+
+//  Add virtual modules for 1-wire domain
+int sensorCount = (int)(Program.Option("ModulesCount").DecimalValue);
+Program.AddVirtualModules("HomeAutomation.OneWire", "Sensor", "homegenie/generic/sensor", 1, sensorCount);
+
+while (Program.IsEnabled)
+{
+  for(int n = 1; n &lt;= sensorCount; n++)
+  {
+    // Get a reference to the virtual module associated with current sensor
+    var module = Modules.InDomain("HomeAutomation.OneWire").WithAddress(n.ToString()).Get();
+    var deviceId = module.Parameter("OneWire.DeviceId").Value;
+    // If a sensor id has been specified for the module, then we read and update temperature values
+    if (deviceId != "")
+    {
+      var data = readSensorData(deviceId);
+      if (data.Count &gt; 0 &amp;&amp; data[0].Contains(" crc=") &amp;&amp; data[0].Contains(" NO")) continue;
+      var temperatureCelsius = parseTemperatureData(data);
+      // Update virtual module data
+      Program.RaiseEvent(module, "Sensor.TemperatureF", (temperatureCelsius * 9d / 5d + 32d).ToString(), "1-Wire Device");
+      Pause(1);
+      Program.RaiseEvent(module, "Sensor.Temperature", temperatureCelsius.ToString(), "1-Wire Device");
+    }
+  }
+
+  double updateInterval = Program.Option("UpdateInterval").DecimalValue;
+  if (updateInterval &lt; 1) updateInterval = 1;
+  Pause(updateInterval);
+}
+</ScriptSource>
+  <ScriptErrors>[]</ScriptErrors>
+  <Domain>HomeAutomation.HomeGenie.Automation</Domain>
+  <Address>133</Address>
+  <Name>One-Wire Devices</Name>
+  <Description>Integrates 1-wire devices as HG modules (linux only).
+To enable a 1-wire device, its ID must be specified in the module options popup.
+To find out your connected devices ID, issue from a terminal the command:
+&amp;nbsp;&amp;nbsp;&lt;i&gt;ls -la /sys/bus/w1/devices/&lt;/i&gt;</Description>
+  <Group>Devices and Things</Group>
+  <Features>
+    <ProgramFeature>
+      <FieldType>text</FieldType>
+      <ForDomains>HomeAutomation.OneWire</ForDomains>
+      <ForTypes>Sensor</ForTypes>
+      <Property>OneWire.DeviceId</Property>
+      <Description>Device ID</Description>
+    </ProgramFeature>
+  </Features>
+  <ActivationTime xsi:nil="true" />
+  <TriggerTime xsi:nil="true" />
+  <Type>CSharp</Type>
+  <IsEnabled>false</IsEnabled>
+</ProgramBlock>

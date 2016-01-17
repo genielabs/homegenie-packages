@@ -1,0 +1,20 @@
+{
+    "author": "genielabs",
+    "version": "v1.0",
+    "title": "Serial Port I/O",
+    "description": "Serial Port example",
+    "published": "2015-02-12T00:00:00Z",
+    "sourcecode": "",
+    "homepage": "", 
+    "widgets": [ ],
+    "programs": [
+        { 
+            "file": "Serial_Port_IO.hgx",
+            "name":"Serial Port I/O",
+            "description": "Serial Port example",
+            "uid": "100507",
+            "group": "Devices and Things" 
+        }
+    ],
+    "interfaces": [ ]
+}
