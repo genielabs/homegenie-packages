@@ -6,7 +6,13 @@
     "published": "2015-02-12T00:00:00Z",
     "sourcecode": "",
     "homepage": "", 
-    "widgets": [ ],
+    "widgets": [
+        { 
+            "file": "weather_earthtools_sundata.zip",
+            "name":"Earth Tools",
+            "description": "Earth Tools Widget"
+        }
+    ],
     "programs": [
         { 
             "file": "Earth_Tools.hgx",
