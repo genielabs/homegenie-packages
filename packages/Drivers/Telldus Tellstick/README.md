@@ -5,7 +5,9 @@ HomeGenie / MIG interface driver for TellStick. Tested on TellStick Duo on Raspb
 **Before installing this package, follow the instructions below.**
 
 ## Features
+
 Currently the interface supports the following:
+
 - Turning lights on/off
 - Dimming lights
 - Reading temperature values
@@ -19,7 +21,7 @@ This interface requires telldus-core libraries. To install these in Windows, Mac
 
 #### Windows
 
-Download telldus center from http://www.telldus.se/products/nativesoftware.
+Download telldus center from <a href="http://www.telldus.se/products/nativesoftware" target="_blank">http://www.telldus.se/products/nativesoftware</a>.
 
 #### Raspberry pi
 
@@ -71,6 +73,8 @@ Done, you can now plug in your telldus usb device, if you have any sensors to te
 
     tdtool -l
 
-The above steps are fetched from the swedish blogpost: <a href="https://blogg.itslav.nu/?p=875" target="_blank">https://blogg.itslav.nu/?p=875</a>
-Here is another more official tutorial I haven't tried myself: http://elinux.org/R-Pi_Tellstick_core.
+The above steps are fetched from the swedish blogpost: <a href="https://blogg.itslav.nu/?p=875" target="_blank">https://blogg.itslav.nu/?p=875</a>.
+
+Here is another more official tutorial I haven't tried myself: <a href="http://elinux.org/R-Pi_Tellstick_core" target="_blank">http://elinux.org/R-Pi_Tellstick_core</a>.
+
 
