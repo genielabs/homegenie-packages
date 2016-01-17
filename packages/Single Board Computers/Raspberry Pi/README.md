@@ -1,4 +1,4 @@
-# HomeGenie Packages Repository
+# Raspberry Pi
 
 This folder contains packages related to Raspberry Pi.
 
