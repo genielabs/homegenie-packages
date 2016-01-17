@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-16"?>
+<ProgramBlock xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <ConditionType>OnTrue</ConditionType>
+  <Conditions />
+  <Commands />
+  <ScriptCondition>// list the program as custom weather widget
+Program.UseWidget( "weather/earthtools/sundata" );
+
+// set input fields parameters
+// &lt;field_name&gt;, &lt;default_value&gt;, &lt;description&gt;
+Program.AddOption("Latitude", "42.50", "Location latitude", "text");
+Program.AddOption("Longitude", "12.50", "Location longitude", "text");
+
+// initialize widget program parameters
+// initialize widget program parameters
+Program.Parameter("Astronomy.Sunset").Value = "";
+Program.Parameter("Astronomy.Sunrise").Value = "";
+// We also initialize the following parameters, even if unused,
+// so we can use weather/wunderground/conditions for displaying data.
+// A more generic widget should be written
+
+Program.Parameter("EarthTool.Morning.Sunrise").Value = "";
+Program.Parameter("EarthTool.Morning.Twilight.Civil").Value = "";
+Program.Parameter("EarthTool.Morning.Twilight.Nautical").Value = "";
+Program.Parameter("EarthTool.Morning.Twilight.Astronomical").Value = "";
+
+Program.Parameter("EarthTool.Evening.Sunset").Value = "";
+Program.Parameter("EarthTool.Evening.Twilight.Civil").Value = "";
+Program.Parameter("EarthTool.Evening.Twilight.Nautical").Value = "";
+Program.Parameter("EarthTool.Evening.Twilight.Astronomical").Value = "";
+
+Program.Run();
+</ScriptCondition>
+  <ScriptSource>while (Program.IsEnabled)
+{
+  var month = DateTime.Now.Month;
+  var day = DateTime.Now.Day;
+  //
+  var latitude = Program.Option("Latitude").Value;
+  var longitude = Program.Option("Longitude").Value;
+  //
+  try
+  {
+    var serviceurl = "http://www.earthtools.org/sun/" + latitude + "/" + longitude + "/" + day + "/" + month + "/99/1";
+    dynamic geodata = Net.WebService(serviceurl).GetData();
+    //
+    Program.Parameter("Astronomy.Sunset").Value = geodata.sun.evening.sunset;
+    Program.Parameter("Astronomy.Sunrise").Value = geodata.sun.morning.sunrise;
+    //
+    Program.Parameter("EarthTool.Morning.Sunrise").Value = geodata.sun.morning.sunrise;
+    Program.Parameter("EarthTool.Morning.Twilight.Civil").Value = geodata.sun.morning.twilight.civil;
+    Program.Parameter("EarthTool.Morning.Twilight.Nautical").Value = geodata.sun.morning.twilight.nautical;
+    Program.Parameter("EarthTool.Morning.Twilight.Astronomical").Value = geodata.sun.morning.twilight.astronomical;
+    //
+    Program.Parameter("EarthTool.Evening.Sunset").Value = geodata.sun.evening.sunset;
+    Program.Parameter("EarthTool.Evening.Twilight.Civil").Value = geodata.sun.evening.twilight.civil;
+    Program.Parameter("EarthTool.Evening.Twilight.Nautical").Value = geodata.sun.evening.twilight.nautical;
+    Program.Parameter("EarthTool.Evening.Twilight.Astronomical").Value = geodata.sun.evening.twilight.astronomical;      
+
+    Program.Notify("Earth Tools", "Updated.");
+  } 
+  catch (Exception ex) 
+  { 
+    Program.Notify("Earth Tools Error!", "Unable to get data from service.");
+    Console.WriteLine(ex.Message + "\n" + ex.StackTrace);
+  }
+  //
+  Pause(24 * 60 * 60); // pause 24 hours before next check
+}</ScriptSource>
+  <ScriptErrors>[]</ScriptErrors>
+  <Domain>HomeAutomation.HomeGenie.Automation</Domain>
+  <Address>72</Address>
+  <Name>Earth Tools</Name>
+  <Description>Gather from http://www.earthtools.org/ service all data about sun rise/set. 
+It can be used for "Sunrise/Sunset" feature.</Description>
+  <Group>Weather and Enviroment</Group>
+  <Features />
+  <ActivationTime xsi:nil="true" />
+  <TriggerTime xsi:nil="true" />
+  <Type>CSharp</Type>
+  <IsEnabled>false</IsEnabled>
+</ProgramBlock>

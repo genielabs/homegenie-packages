@@ -1,0 +1,173 @@
+<?xml version="1.0" encoding="utf-16"?>
+<ProgramBlock xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <ConditionType>OnTrue</ConditionType>
+  <Conditions />
+  <Commands />
+  <ScriptCondition>Program.AddOption("ModemIp", "", "1. Modem IP address", "text");
+//Program.AddOption("ModemUsername", "", "2. Modem username", "text");
+Program.AddOption("ModemPassword", "", "2. Modem password", "text");
+Program.AddOption("SmsRecipient", "", "4. Recipient phone number", "text");
+Program.AddFeature("", "Switch,Dimmer,Light,Siren,Sensor,Program,DoorWindow", "AlcatelY800Z.NotifyEvents", "Send SMS on module event", "checkbox");
+Program.AddVirtualModule("Network.AlcatelY800Z", "CM", "Switch", "homegenie/generic/switch");
+Program.Run();
+</ScriptCondition>
+  <ScriptSource>const string NOTIFICATION_TITLE = "Alcatel Y800Z";
+var modemAddress = Program.Option("ModemIp").Value;
+var modemUsername = "admin"; //Program.Option("ModemUsername").Value;
+var modemPassword = Program.Option("ModemPassword").Value;
+var smsRecipient = Program.Option("SmsRecipient").Value;
+
+var doLogin = new Func&lt;dynamic&gt;(()=&gt;{
+  return Net
+    .WebService("http://" + modemAddress + "/goform/setLogin")
+    .Post("username=" + modemUsername + "&amp;password=" + modemPassword)
+    .GetData();
+});
+
+var doConnect = new Func&lt;dynamic&gt;(()=&gt;{
+  return Net
+    .WebService("http://" + modemAddress + "/goform/setWanConnect")
+    .Post("profile_id=16")
+    .GetData();
+});
+
+var doDisconnect = new Func&lt;dynamic&gt;(()=&gt;{
+  return Net
+    .WebService("http://" + modemAddress + "/goform/setWanDisconnect")
+    .Post("")
+    .GetData();
+});
+
+var getStatus = new Func&lt;dynamic&gt;(()=&gt;{
+  return Net
+    .WebService("http://" + modemAddress + "/goform/getWanInfo")
+    .Post("d=1")
+    .GetData();
+});
+
+var sendSms = new Func&lt;string, string, dynamic&gt;((recipient, message)=&gt;{
+  return Net
+    .WebService("http://" + modemAddress + "/goform/sendSMS")
+    .Post("sms_number=" + recipient + "&amp;sms_content=" + message + "&amp;action_type=new")
+    .GetData();
+});
+
+Func&lt;string,bool&gt; SmsSend = new Func&lt;string,bool&gt;((message)=&gt;{
+  var success = false;
+  var loginData = doLogin();
+  if (loginData.error == "0")
+  {	
+    var smsSend = sendSms(smsRecipient, message);
+    if (smsSend.error == "0")
+    {
+      success = true;
+      Program.Notify(NOTIFICATION_TITLE, "SMS succesfully delivered.");
+    }
+    else
+    {
+      Program.Notify(NOTIFICATION_TITLE, "ERROR: Could not send SMS (Err:" + smsSend.error + ").");
+    }
+  }
+  else
+  {
+    Program.Notify(NOTIFICATION_TITLE, "ERROR: Wrong Modem IP or credentials.");
+  }
+  return success;
+});
+
+
+// We want to do further processing whenever a module changes 
+When.ModuleParameterChanged( (module, property) =&gt; {
+  if (Program.Option("SmsRecipient").Value != "")
+  {
+    // Security Alarm System Notification
+    if (module.Instance.Name == "Security Alarm System" &amp;&amp; property.Name == "HomeGenie.SecurityTriggered" &amp;&amp; property.Value == "1")
+    {
+      var source = Program.WithName("Security Alarm System").Parameter("HomeGenie.SecurityTriggerSource").Value;
+      SmsSend("WARNING! Alarm was just triggered: " + source);
+    }
+    else if (module.HasFeature("AlcatelY800Z.NotifyEvents") &amp;&amp; (property.Name.StartsWith("Sensor.") || property.Name.StartsWith("Status.")))
+    {
+      var message = module.Instance.Name + " " + property.Name + "=" + property.Value + " (" + module.Instance.Domain + "." + module.Instance.Address + ")";
+      SmsSend(message);
+    }      
+  }
+  // returning true, will route event to other listeners
+  return true; 
+
+});
+
+When.WebServiceCallReceived("Network.AlcatelY800Z", (query)=&gt;{
+  var args = ((string)query).Split('/');
+  var domain = args[0]; // Network.AlcatelY800Z
+  var module = args[1];
+  var command = args[2];
+  object response = null;
+  if (module == "CM") // Connection Manager
+  {
+    Program.Notify("Internet", "...");
+    var login = doLogin();
+    Program.Notify("Internet", "res:" + login);
+    switch(command)
+    {
+      case "Control.Connect":
+      case "Control.On":
+      	if (login.error == "0")
+        {
+          var res = doConnect(); Pause(2);
+          response = res;
+          try {
+              if (res.error == "0") Program.Say("Connected to Internet.", "en-US");
+          } catch { }
+        }
+      	else
+        {
+          response = "{ error: 'login_error' }";
+          Program.Notify(NOTIFICATION_TITLE, "ERROR: Wrong Modem IP or credentials.");
+        }
+      	break;
+      case "Control.Disconnect":
+      case "Control.Off":
+      	if (login.error == "0")
+        {
+          var info = getStatus();
+          try {
+              if (info.wan_state == "2") Program.Say("Internet disconnected.", "en-US");
+          } catch { }
+          response = doDisconnect();
+        }
+      	else
+        {
+          response = "{ error: 'login_error' }";
+          Program.Notify(NOTIFICATION_TITLE, "ERROR: Wrong Modem IP or credentials.");
+        }
+        break;
+      case "Status.Info":
+      	if (login.error == "0")
+        {
+          response = getStatus();
+        }
+      	else
+        {
+          response = "{ error: 'login_error' }";
+          Program.Notify(NOTIFICATION_TITLE, "ERROR: Wrong Modem IP or credentials.");
+        }
+        break;
+    }
+  }
+  return response;
+});
+
+Program.GoBackground();</ScriptSource>
+  <ScriptErrors>[]</ScriptErrors>
+  <Domain>HomeAutomation.HomeGenie.Automation</Domain>
+  <Address>201</Address>
+  <Name>Alcatel One Touch Y800Z SMS Notify</Name>
+  <Description>Send SMS notifies when a device status changes and/or when the Security Alarm System is triggered.</Description>
+  <Group>Messaging and Social</Group>
+  <Features />
+  <ActivationTime xsi:nil="true" />
+  <TriggerTime xsi:nil="true" />
+  <Type>CSharp</Type>
+  <IsEnabled>false</IsEnabled>
+</ProgramBlock>

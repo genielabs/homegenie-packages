@@ -1,0 +1,20 @@
+{
+    "author": "genielabs",
+    "version": "v1.0",
+    "title": "Earth Tools",
+    "description": "Earth Tools sunrise and sunset data",
+    "published": "2015-02-12T00:00:00Z",
+    "sourcecode": "",
+    "homepage": "", 
+    "widgets": [ ],
+    "programs": [
+        { 
+            "file": "Earth_Tools.hgx",
+            "name":"Earth Tools",
+            "description": "Earth Tools sunrise and sunset data",
+            "uid": "100501",
+            "group": "Weather and Enviroment" 
+        }
+    ],
+    "interfaces": [ ]
+}

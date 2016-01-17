@@ -1,0 +1,20 @@
+{
+    "author": "Jan (jkUtils)",
+    "version": "v1.0",
+    "title": "Open Weather",
+    "description": "Open Weather data",
+    "published": "2015-12-02T00:00:00Z",
+    "sourcecode": "",
+    "homepage": "http://www.homegenie.it/forum/index.php?topic=142.0", 
+    "widgets": [ ],
+    "programs": [
+        { 
+            "file": "OpenWeatherData.hgx",
+            "name":"Open Weather",
+            "description": "Open Weather data",
+            "uid": "100601",
+            "group": "Weather and Enviroment" 
+        }
+    ],
+    "interfaces": [ ]
+}
