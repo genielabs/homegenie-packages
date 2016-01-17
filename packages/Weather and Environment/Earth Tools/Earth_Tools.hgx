@@ -41,7 +41,7 @@ Program.Run();
   //
   try
   {
-    var serviceurl = "http://www.earthtools.org/sun/" + latitude + "/" + longitude + "/" + day + "/" + month + "/99/1";
+    var serviceurl = "http://new.earthtools.org/sun/" + latitude + "/" + longitude + "/" + day + "/" + month + "/99/1";
     dynamic geodata = Net.WebService(serviceurl).GetData();
     //
     Program.Parameter("Astronomy.Sunset").Value = geodata.sun.evening.sunset;
