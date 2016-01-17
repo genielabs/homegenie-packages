@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-16"?>
+<ProgramBlock xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <ConditionType>OnTrue</ConditionType>
+  <Conditions />
+  <Commands />
+  <ScriptCondition>Program.Run();
+</ScriptCondition>
+  <ScriptSource>var address = 0x38;
+
+var clockPin = Pcf8574Pin.P2;
+var readWritePin = Pcf8574Pin.P1;
+var registerSelectPin = Pcf8574Pin.P0;
+var backlightPin = Pcf8574Pin.P3;
+
+var dataPins = new[]
+{
+  Pcf8574Pin.P4,
+  Pcf8574Pin.P5,
+  Pcf8574Pin.P6,
+  Pcf8574Pin.P7
+};
+
+var sdaPin = ConnectorPin.P1Pin03;
+var sclPin = ConnectorPin.P1Pin05;
+var driver = new I2cDriver(sdaPin.ToProcessor(), sclPin.ToProcessor()) { ClockDivider = 512 };
+var connection = new Pcf8574I2cConnection(driver.Connect(address));
+
+dynamic configuration = new dynamic();
+configuration.Pins = new Hd44780Pins(
+  connection.Out(registerSelectPin),
+  connection.Out(clockPin),
+  dataPins.Select(p =&gt; (IOutputBinaryPin)connection.Out(p)))
+{
+  Backlight = connection.Out(backlightPin),
+  ReadWrite = connection.Out(readWritePin),
+};
+
+var settings = new Hd44780LcdConnectionSettings
+{
+  ScreenWidth = 20,
+  ScreenHeight = 2,
+};
+
+using (var display = new Hd44780LcdConnection(settings, configuration.Pins))
+{
+  display.SetCustomCharacter(1, new byte[] {0x0, 0x0, 0x04, 0xe, 0x1f, 0x0, 0x0});
+  display.SetCustomCharacter(2, new byte[] {0x0, 0x0, 0x1f, 0xe, 0x04, 0x0, 0x0});
+  display.Clear();
+  display.WriteLine("OS Version");
+  display.WriteLine(Environment.OSVersion);
+}
+</ScriptSource>
+  <ScriptErrors>[]</ScriptErrors>
+  <Domain>HomeAutomation.HomeGenie.Automation</Domain>
+  <Address>67</Address>
+  <Name>HD44780 LCD PCF8574</Name>
+  <Description>Example of using HD44780 LCD with PCF8574 I2C I/O expander</Description>
+  <Group>Raspberry Pi</Group>
+  <Features />
+  <ActivationTime xsi:nil="true" />
+  <TriggerTime xsi:nil="true" />
+  <Type>CSharp</Type>
+  <IsEnabled>false</IsEnabled>
+</ProgramBlock>

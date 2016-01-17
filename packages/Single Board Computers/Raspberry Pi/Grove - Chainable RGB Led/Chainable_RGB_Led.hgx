@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="utf-16"?>
+<ProgramBlock xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <ConditionType>OnTrue</ConditionType>
+  <Conditions />
+  <Commands />
+  <ScriptCondition>Program.AddOption("LedsNumber", "1", "Number of chained RGB leds", "text");
+Program.Run();
+</ScriptCondition>
+  <ScriptSource>var rgbModules = Modules.InDomain("HomeAutomation.GroveRGB");
+
+int ledsCount = (int)Program.Option("LedsCount").DecimalValue;
+
+var driver = GpioConnectionSettings.DefaultDriver;
+var gpioOut1 = new GpioOutputBinaryPin(driver, ConnectorPin.P1Pin13.ToProcessor());
+var gpioOut2 = new GpioOutputBinaryPin(driver, ConnectorPin.P1Pin07.ToProcessor());
+var groveRgb = new GroveRgbConnection(gpioOut1, gpioOut2, ledsCount);
+
+Program.AddVirtualModules("HomeAutomation.GroveRGB", "Dimmer", "homegenie/generic/colorlight", 1, ledsCount);
+for(int x = 0; x &lt; ledsCount; x++)
+{
+  var module = rgbModules.WithAddress((x+1).ToString()).Get();
+  groveRgb.SetColor(x, new RgbColor(0, 0, 0));
+  module.Parameter("Status.Level").Value = "0";
+  module.Parameter("Status.ColorHsb").Value = "1,1,1";
+}
+
+When.ProgramStopping(()=&gt;{
+  ((IDisposable)groveRgb).Dispose();
+  return true;
+});
+
+When.WebServiceCallReceived("HomeAutomation.GroveRGB", ( args ) =&gt; {
+  string[] reqs = ((string)args).Split('/');
+  //string domain = reqs[0];
+  try
+  {
+    string lightnumber = reqs[1];
+    string command = reqs[2];
+    string parameter = ""; if (reqs.Length &gt; 3) parameter = Uri.UnescapeDataString(reqs[3]);
+    //
+    var module = rgbModules.WithAddress(lightnumber).Get();
+    int lightId = int.Parse(lightnumber) - 1;
+    //
+    switch(command)
+    {
+      // eg. http://&lt;hg_address&gt;/api/HomeAutomation.PhilipsHue/&lt;light_number&gt;/Control.On
+      case "Control.On":
+      string[] memory = module.Parameter("Status.ColorHsb").Value.Split(',');
+      groveRgb.SetColor(lightId, RgbColor.FromHsv(double.Parse(memory[0], System.Globalization.CultureInfo.InvariantCulture),
+                                                  double.Parse(memory[1], System.Globalization.CultureInfo.InvariantCulture),
+                                                  double.Parse(memory[2], System.Globalization.CultureInfo.InvariantCulture)));
+      Program.RaiseEvent(module, "Status.Level", "1", "Groove RGB Led");
+      Program.RaiseEvent(module, "Status.ColorHsb", module.Parameter("Status.ColorHsb").Value, "Color Light");
+      break;
+      // eg. http://&lt;hg_address&gt;/api/HomeAutomation.PhilipsHue/&lt;light_number&gt;/Control.Off
+      case "Control.Off":
+      groveRgb.SetColor(lightId, new RgbColor());
+      Program.RaiseEvent(module, "Status.Level", "0", "Groove RGB Led");
+      break;
+      case "Control.Toggle":
+      if (module.Parameter("Status.Level").DecimalValue == 0)
+      {
+        groveRgb.SetColor(lightId, new RgbColor(255, 255, 255));
+        Program.RaiseEvent(module, "Status.Level", "1", "Groove RGB Led");
+      }
+      else
+      {
+        groveRgb.SetColor(lightId, new RgbColor());
+        Program.RaiseEvent(module, "Status.Level", "0", "Groove RGB Led");
+      }
+      break;
+      case "Control.Level":
+      //bridgeapicall(lightnumber, "{ \"bri\" : " + ((int)(double.Parse(parameter) * 2.5)).ToString() + " }");
+      //Program.RaiseEvent(module, "Status.Level", (double.Parse(parameter) / 100D).ToString(), "Hue Light");
+      break;
+      // eg. http://&lt;hg_address&gt;/api/HomeAutomation.PhilipsHue/&lt;light_number&gt;/Control.ColorHsb/&lt;hue&gt;,&lt;sat&gt;,&lt;bri&gt;
+      case "Control.ColorHsb":
+      string[] values = parameter.Split(',');
+      //double transition = 5;
+      //if (values.Length &gt; 3) transition = ((int)(double.Parse(values[3]) * 10)); 
+      groveRgb.SetColor(lightId, RgbColor.FromHsv(double.Parse(values[0], System.Globalization.CultureInfo.InvariantCulture),
+                                                  double.Parse(values[1], System.Globalization.CultureInfo.InvariantCulture),
+                                                  double.Parse(values[2], System.Globalization.CultureInfo.InvariantCulture)));
+      Program.RaiseEvent(module, "Status.Level", (double.Parse(values[2], System.Globalization.CultureInfo.InvariantCulture)).ToString(), "Color Light");
+      Program.RaiseEvent(module, "Status.ColorHsb", parameter, "Color Light");
+      break; 
+    }
+    //
+    return "{ 'ResponseValue' : 'OK' }";    
+  } catch (Exception e) { 
+
+    Program.Notify("Grove RGB ERROR!", e.Message);
+
+  }
+  return "{ 'ResponseValue' : 'ERROR' }";
+}); 
+
+
+Program.GoBackground();</ScriptSource>
+  <ScriptErrors>[]</ScriptErrors>
+  <Domain>HomeAutomation.HomeGenie.Automation</Domain>
+  <Address>62</Address>
+  <Name>Grove - Chainable RGB Led</Name>
+  <Description>Chainable RGB color leds modules wired to GPIO#4 and GPIO#21/27 (power with 3v3).
+http://www.seeedstudio.com/wiki/Grove_-_Chainable_RGB_LED</Description>
+  <Group>Raspberry Pi</Group>
+  <Features />
+  <ActivationTime xsi:nil="true" />
+  <TriggerTime xsi:nil="true" />
+  <Type>CSharp</Type>
+  <IsEnabled>false</IsEnabled>
+</ProgramBlock>

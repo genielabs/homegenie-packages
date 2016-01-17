@@ -1,0 +1,20 @@
+{
+    "author": "genielabs",
+    "version": "v1.0",
+    "title": "HCSR04 Ultrasonic Ranging Module",
+    "description": "Display data from HCSR04 Ultrasonic Ranging Module",
+    "published": "2015-02-12T00:00:00Z",
+    "sourcecode": "",
+    "homepage": "", 
+    "widgets": [ ],
+    "programs": [
+        { 
+            "file": "HCSR04_Ultrasonic_Ranging_Module.hgx",
+            "name":"HCSR04 Ultrasonic Ranging Module",
+            "description": "Display data from HCSR04 Ultrasonic Ranging Module",
+            "uid": "100306",
+            "group": "Raspberry Pi" 
+        }
+    ],
+    "interfaces": [ ]
+}

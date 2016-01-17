@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-16"?>
+<ProgramBlock xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <ConditionType>OnTrue</ConditionType>
+  <Conditions />
+  <Commands />
+  <ScriptCondition>// set the widget that will display this program data (temperature,humidity).
+Program.UseWidget("homegenie/generic/sensor");
+Program.AddOption("UpdateInterval", "600", "Update Interval (seconds)", "text");
+Program.Run();
+</ScriptCondition>
+  <ScriptSource>var measurePin = ConnectorPin.P1Pin7; // GPIO#4
+var driver = GpioConnectionSettings.GetBestDriver(GpioConnectionDriverCapabilities.CanChangePinDirectionRapidly);
+
+When.ProgramStopping(()=&gt;{
+  ((IDisposable)driver).Dispose();
+  return true;
+});
+
+// it makes program to respond to webservices calls:
+// - http://&lt;hg_address&gt;/api/Components.DHT22/0/Sensor.Temperature
+When.WebServiceCallReceived("Components.DHT22/0/Sensor.Temperature", ( args ) =&gt; {
+  return "{ 'ResponseValue' : '" + Program.Parameter("Sensor.Temperature").Value + "' }";
+});
+// - http://&lt;hg_address&gt;/api/Components.DHT22/0/Sensor.Humidity
+When.WebServiceCallReceived("Components.DHT22/0/Sensor.Humidity", ( args ) =&gt; {
+  return "{ 'ResponseValue' : '" + Program.Parameter("Sensor.Humidity").Value + "' }";
+});
+
+while (Program.IsEnabled)
+{
+  using (var pin = driver.InOut(measurePin))
+    using (var dhtConnection = new Dht22Connection(pin))
+  {
+    var data = dhtConnection.GetData();
+    if (data != null)
+    {
+      // data read succesfully
+      Program.RaiseEvent("Sensor.Humidity", data.RelativeHumidity.Percent.ToString(CultureInfo.InvariantCulture), "DHT-22 Sensor");
+      Program.RaiseEvent("Sensor.Temperature", data.Temperature.DegreesCelsius.ToString(CultureInfo.InvariantCulture), "DHT-22 Sensor");
+      break;
+    }
+  }
+
+  var pause = Program.Option("UpdateInterval").DecimalValue;
+  if (pause == 0) pause = 600; // default pause is 10 minutes
+  Pause(pause);
+}
+</ScriptSource>
+  <ScriptErrors>[]</ScriptErrors>
+  <Domain>HomeAutomation.HomeGenie.Automation</Domain>
+  <Address>63</Address>
+  <Name>DHT-22 Sensor</Name>
+  <Description>Temperature and Humidity sensing using DHT-22 with data pin on GPIO#4. 
+Edit program code line #1 to change the data pin GPIO.
+</Description>
+  <Group>Raspberry Pi</Group>
+  <Features />
+  <ActivationTime xsi:nil="true" />
+  <TriggerTime xsi:nil="true" />
+  <Type>CSharp</Type>
+  <IsEnabled>false</IsEnabled>
+</ProgramBlock>

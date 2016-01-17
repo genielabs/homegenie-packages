@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="utf-16"?>
+<ProgramBlock xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <ConditionType>OnTrue</ConditionType>
+  <Conditions />
+  <Commands />
+  <ScriptCondition />
+  <ScriptSource>var pinDta = ConnectorPin.P1Pin07.ToProcessor();
+var pinClk = ConnectorPin.P1Pin13.ToProcessor();
+
+var driver = GpioConnectionSettings.DefaultDriver;
+
+driver.Allocate(pinDta, PinDirection.Output);
+driver.Allocate(pinClk, PinDirection.Output);
+
+When.ProgramStopping(()=&gt;{
+  ((IDisposable)driver).Dispose();
+  return true;
+});
+
+//init 
+driver.Write(pinDta, false);
+Raspberry.Timers.HighResolutionTimer.Sleep(TimeSpan.FromTicks(1));
+
+
+for(int i = 0; i &lt; 4; i++)
+{
+  driver.Write(pinDta, true);
+  driver.Write(pinDta, false);
+}
+
+var sendData16 = new Func&lt;uint, bool&gt;((data)=&gt;{
+  // send 16 bit data
+  for(int i=0; i&lt;16; i++)
+  {
+    bool state = ((data&amp;0x8000) &gt; 0 ? true : false);
+    driver.Write(pinDta, state);
+    state = driver.Read(pinClk) ? false : true;
+    driver.Write(pinClk, state);
+    data &lt;&lt;= 1;
+  }
+  return true;
+});
+
+var latchData = new Func&lt;bool&gt;(()=&gt;{
+  driver.Write(pinDta, false);
+  Raspberry.Timers.HighResolutionTimer.Sleep(TimeSpan.FromTicks(1));
+  for(int i=0; i&lt;4; i++)
+  {
+    driver.Write(pinDta, true);
+    driver.Write(pinDta, false);
+  }
+  return true;
+});
+
+uint CMDMODE = 0x0000;
+
+
+var setLeds = new Func&lt;string, bool&gt;((leds)=&gt;{
+  sendData16(CMDMODE);
+  uint index_bits = (uint)Convert.ToInt32(leds, 2);
+  for (int i=0;i&lt;12;i++)
+  {
+    uint state = (uint)((index_bits&amp;0x0001) &gt; 0 ? 0x00FF : 0x0000);
+    sendData16(state);
+    index_bits = index_bits&gt;&gt;1;
+  }
+  latchData();
+  return true;
+});
+
+setLeds("1000000000");
+//Pause(.1);
+setLeds("0100000000");
+//Pause(.1);
+setLeds("0010000000");
+//Pause(.1);
+setLeds("0001000000");
+//Pause(.1);
+setLeds("0000100000");
+//Pause(.1);
+setLeds("0000010000");
+//Pause(.1);
+setLeds("0000001000");
+//Pause(.1);
+setLeds("0000000100");
+//Pause(.1);
+setLeds("0000000010");
+//Pause(.1);
+setLeds("0000000001");
+//Pause(.1);
+
+
+Pause(3);
+
+
+var setLevel = new Func&lt;int, bool&gt;((level)=&gt;{
+  sendData16(CMDMODE);
+  for(int i=0;i&lt;12;i++)
+  {
+    uint state1 = (uint)((i&lt; level) ? 0x00FF : 0x0000);
+    sendData16(state1);
+  }
+  latchData();
+  return true;
+});
+
+for (int z = 0; z &lt; 1000; z++)
+{
+  setLevel(z % 11);
+}
+</ScriptSource>
+  <ScriptErrors>[]</ScriptErrors>
+  <Domain>HomeAutomation.HomeGenie.Automation</Domain>
+  <Address>60</Address>
+  <Name>Grove - Led Bar</Name>
+  <Description>Using a Grove Led Bar.
+http://www.seeedstudio.com/wiki/Grove_-_LED_Bar</Description>
+  <Group>Raspberry Pi</Group>
+  <Features />
+  <ActivationTime xsi:nil="true" />
+  <TriggerTime xsi:nil="true" />
+  <Type>CSharp</Type>
+  <IsEnabled>false</IsEnabled>
+</ProgramBlock>

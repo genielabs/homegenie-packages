@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-16"?>
+<ProgramBlock xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <ConditionType>OnTrue</ConditionType>
+  <Conditions />
+  <Commands />
+  <ScriptCondition>// set the widget that will display this program data (the distance).
+// the builtin 'homegenie/generic/sensor' widget, 
+// will display all parameters starting with Sensor.*
+Program.UseWidget("homegenie/generic/sensor");
+
+// initialize program parameters
+Program.Parameter("Sensor.Distance").Value = "";
+Program.Parameter("Sensor.StatusMessage").Value = "";
+
+Program.Run();
+</ScriptCondition>
+  <ScriptSource>// example code adapted from https://github.com/raspberry-sharp/
+//
+var driver = GpioConnectionSettings.DefaultDriver;
+
+Func&lt;bool&gt; readdistance = new Func&lt;bool&gt;(() =&gt; {
+  var triggerPin = ConnectorPin.P1Pin03.ToProcessor();
+  var echoPin = ConnectorPin.P1Pin07.ToProcessor();
+  var success = false;
+
+  using (var connection = new HcSr04Connection(driver.Out(triggerPin), driver.In(echoPin)))
+  {
+    try
+    {
+      var distance = connection.GetDistance() * 100;
+      Program.Parameter("Sensor.Distance").Value = String.Format("{0:0.0}", distance);
+      success = true;
+    }
+    catch (Exception e)
+    {
+      //        Console.WriteLine(e.Message + "\n" + e.StackTrace);
+      Program.Notify("HCSR04 Error", e.Message);
+      Program.Parameter("Sensor.Distance").Value = "-1";
+      success = false;
+    }
+  }
+  return success;
+});
+
+When.ProgramStopping(()=&gt;{
+  ((IDisposable)driver).Dispose();
+  return true;
+});
+
+// it makes program to respond to webservices calls:
+//     http:///api/Components.HCSR04/0/Sensor.Distance
+When.WebServiceCallReceived("Components.HCSR04/0/Sensor.Distance", ( args ) =&gt; {
+  var res = "ERROR";
+  if (readdistance())
+  {
+    res = Program.Parameter("Sensor.Distance").Value;
+  }
+  return "{ 'ResponseValue' : '" + res + "' }";
+}); 
+</ScriptSource>
+  <ScriptErrors>[]</ScriptErrors>
+  <Domain>HomeAutomation.HomeGenie.Automation</Domain>
+  <Address>37</Address>
+  <Name>HCSR04 - Ultrasonic Ranging Module</Name>
+  <Description>Ultrasonic Ranging Module sensor </Description>
+  <Group>Raspberry Pi</Group>
+  <Features />
+  <ActivationTime xsi:nil="true" />
+  <TriggerTime xsi:nil="true" />
+  <Type>CSharp</Type>
+  <IsEnabled>false</IsEnabled>
+</ProgramBlock>

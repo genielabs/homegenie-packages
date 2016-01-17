@@ -1,0 +1,20 @@
+{
+    "author": "genielabs",
+    "version": "v1.0",
+    "title": "DHT-22 Sensor Module",
+    "description": "DHT-22 Module for displaying temperature and humidity",
+    "published": "2015-02-12T00:00:00Z",
+    "sourcecode": "",
+    "homepage": "", 
+    "widgets": [ ],
+    "programs": [
+        { 
+            "file": "DHT-22_Sensor.hgx",
+            "name":"DHT-22 Sensor Module",
+            "description": "DHT-22 Module for displaying temperature and humidity",
+            "uid": "100302",
+            "group": "Raspberry Pi" 
+        }
+    ],
+    "interfaces": [ ]
+}

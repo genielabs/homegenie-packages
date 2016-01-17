@@ -4,6 +4,8 @@ HomeGenie / MIG interface driver for TellStick. Tested on TellStick Duo on Raspb
 
 **Before installing this package, follow the instructions below.**
 
+Once installed, enable the driver from the **Settings** page.
+
 ## Features
 
 Currently the interface supports the following:

@@ -1,0 +1,20 @@
+{
+    "author": "genielabs",
+    "version": "v1.0",
+    "title": "SSD1306 OLED display",
+    "description": "Controlling SSD1306 OLED",
+    "published": "2015-02-12T00:00:00Z",
+    "sourcecode": "",
+    "homepage": "", 
+    "widgets": [ ],
+    "programs": [
+        { 
+            "file": "SSD1306_OLED.hgx",
+            "name":"SSD1306 OLED display",
+            "description": "Controlling SSD1306 OLED",
+            "uid": "100312",
+            "group": "Raspberry Pi" 
+        }
+    ],
+    "interfaces": [ ]
+}

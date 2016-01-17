@@ -1,0 +1,182 @@
+<?xml version="1.0" encoding="utf-16"?>
+<ProgramBlock xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <ConditionType>OnTrue</ConditionType>
+  <Conditions>
+    <ProgramCondition>
+      <Domain>HomeAutomation.ZWave</Domain>
+      <Target>37</Target>
+      <Property>Sensor.DoorWindow</Property>
+      <ComparisonOperator>Equals</ComparisonOperator>
+      <ComparisonValue>255</ComparisonValue>
+    </ProgramCondition>
+  </Conditions>
+  <Commands>
+    <ProgramCommand>
+      <Domain>HomeAutomation.ZWave</Domain>
+      <Target>4</Target>
+      <CommandString>Control.Off</CommandString>
+      <CommandArguments />
+    </ProgramCommand>
+  </Commands>
+  <ScriptCondition>Program.Run();
+</ScriptCondition>
+  <ScriptSource>var moduleDomain = "Components.MCP23017";
+
+// This examples will add 16 modules of type "Switch"
+// corresponding to A0-A7 and B0-B7 pins, configured as INPUT or OUTPUT
+//
+var pinConfiguration = new List&lt;dynamic&gt;(){
+  new { Address =  "1", Pin = Mcp23017Pin.A0, Direction = Mcp23017PinDirection.Output },
+    new { Address =  "2", Pin = Mcp23017Pin.A1, Direction = Mcp23017PinDirection.Output },
+    new { Address =  "3", Pin = Mcp23017Pin.A2, Direction = Mcp23017PinDirection.Output },
+    new { Address =  "4", Pin = Mcp23017Pin.A3, Direction = Mcp23017PinDirection.Output },
+    new { Address =  "5", Pin = Mcp23017Pin.A4, Direction = Mcp23017PinDirection.Output },
+    new { Address =  "6", Pin = Mcp23017Pin.A5, Direction = Mcp23017PinDirection.Output },
+    new { Address =  "7", Pin = Mcp23017Pin.A6, Direction = Mcp23017PinDirection.Output },
+    new { Address =  "8", Pin = Mcp23017Pin.A7, Direction = Mcp23017PinDirection.Output },
+    //
+    new { Address =  "9", Pin = Mcp23017Pin.B0, Direction = Mcp23017PinDirection.Input, PullUpResistor = true },
+    new { Address = "10", Pin = Mcp23017Pin.B1, Direction = Mcp23017PinDirection.Input, PullUpResistor = true },
+    new { Address = "11", Pin = Mcp23017Pin.B2, Direction = Mcp23017PinDirection.Input, PullUpResistor = true },
+    new { Address = "12", Pin = Mcp23017Pin.B3, Direction = Mcp23017PinDirection.Input, PullUpResistor = true },
+    new { Address = "13", Pin = Mcp23017Pin.B4, Direction = Mcp23017PinDirection.Input, PullUpResistor = true },
+    new { Address = "14", Pin = Mcp23017Pin.B5, Direction = Mcp23017PinDirection.Input, PullUpResistor = true },
+    new { Address = "15", Pin = Mcp23017Pin.B6, Direction = Mcp23017PinDirection.Input, PullUpResistor = true },
+    new { Address = "16", Pin = Mcp23017Pin.B7, Direction = Mcp23017PinDirection.Input, PullUpResistor = true }
+};
+bool[] pinStatus = new bool[16];
+//
+// Change SDA and SCL pins to match your current setup
+//
+var sdaPin = ConnectorPin.P1Pin03.ToProcessor();
+var sclPin = ConnectorPin.P1Pin05.ToProcessor();
+//
+var driver = new I2cDriver(sdaPin, sclPin);
+var deviceConnection = new Mcp23017I2cConnection(driver.Connect(0x20));
+//
+When.ProgramStopping(()=&gt;{
+  ((IDisposable)driver).Dispose();
+  return true;
+});
+// implement Control.On, Control.Off, Control.Toggle serice API
+// for the domain Components.MCP23017
+When.WebServiceCallReceived(moduleDomain, ( args ) =&gt; {
+  string[] reqs = ((string)args).Split('/');
+  var errormessage = "";
+  try
+  {
+    string pinid = reqs[1];
+    string command = reqs[2];
+    //
+    var module = Modules.InDomain(moduleDomain).WithAddress(pinid).Get();
+    // modules with id from 1 to 8 are mapped as A0-A7
+    // modules with id from 9 to 16 as B0-B7
+    var pinname = "";
+    var i = int.Parse(pinid); 
+    if (i &lt;= 8) 
+    {
+      pinname = "A" + (i - 1).ToString();
+    }
+    else
+    {
+      pinname = "B" + (i - 9).ToString();
+    }      
+    //
+    var mcppin = (Mcp23017Pin)Enum.Parse(typeof(Mcp23017Pin), pinname);
+    switch(command)
+    {
+      // eg. http://hg_address/api/Expanders.MCP23017/1/Control.On
+      case "Control.On":
+      deviceConnection.SetPinStatus(mcppin, true);
+      break;
+      // eg. http://hg_address/api/Expanders.MCP23017/3/Control.Off
+      case "Control.Off":
+      deviceConnection.SetPinStatus(mcppin, false);
+      break;
+      // eg. http://hg_address/api/Expanders.MCP23017/9/Control.Toggle
+      case "Control.Toggle":
+      deviceConnection.Toogle(mcppin);
+      break;
+    }
+    Program.RaiseEvent(module, "Status.Level", 
+                       deviceConnection.GetPinStatus(mcppin) ? "1" : "0", 
+                       "MCP23017 " + pinname);
+    //
+    return "{ 'ResponseValue' : 'OK' }";  
+  } 
+  catch (Exception ex) 
+  { 
+    errormessage = ex.Message + " " + ex.StackTrace;
+  }
+  // unable to process request
+  return "{ 'ResponseValue' : 'ERROR " + errormessage + "' }";
+});
+
+// Initialize MCP23017 pins
+for (int p = 0; p &lt; pinConfiguration.Count; p++)
+{
+  var pincfg = pinConfiguration[p];
+  // set direction and read pin status
+  deviceConnection.SetDirection(pincfg.Pin, pincfg.Direction);
+  pinStatus[p] = deviceConnection.GetPinStatus(pincfg.Pin);
+  // associate a virtual module with the pin
+  if (pincfg.Direction == Mcp23017PinDirection.Output)
+  {
+    Program.AddVirtualModule(moduleDomain, pincfg.Address, "Switch", "");                  
+  }
+  else // Input 
+  {
+    if (pincfg.PullUpResistor)
+    {
+      deviceConnection.SetResistor(pincfg.Pin, Mcp23017PinResistor.PullUp);
+    }
+    Program.AddVirtualModule(moduleDomain, pincfg.Address, "Sensor", "homegenie/generic/sensor");                  
+  }
+  // get the module associated to the pin and store current status
+  var module = Modules.InDomain(moduleDomain).WithAddress(pincfg.Address).Get();
+  module.Parameter("Status.Level").Value = (pinStatus[p] ? "1" : "0");
+}
+
+// status polling loop
+while (Program.IsEnabled)
+{
+  Pause(0.5); // 500 ms poll resolution
+  //
+  for (int p = 0; p &lt; pinConfiguration.Count; p++)
+  {
+    var pincfg = pinConfiguration[p];
+    if (pincfg.Direction == Mcp23017PinDirection.Input)
+    {
+      bool status = deviceConnection.GetPinStatus(pincfg.Pin);
+      // check if the pin status changed
+      if (pinStatus[p] != status)
+      {
+        // get the module associated to the pin
+        var module = Modules.InDomain(moduleDomain).WithAddress(pincfg.Address).Get();
+        // raise the event and update the current pin status
+        Program.RaiseEvent(module, "Status.Level", 
+                           status ? "1" : "0", 
+                           "MCP23017 " + pincfg.Pin.ToString());
+        pinStatus[p] = status;
+        Pause(0.1);
+      }
+    }
+  }
+}
+</ScriptSource>
+  <ScriptErrors>[]</ScriptErrors>
+  <Domain>HomeAutomation.HomeGenie.Automation</Domain>
+  <Address>71</Address>
+  <Name>MCP23017 GPIO Modules</Name>
+  <Description>MCP23017 expander GPIO mapped to HG modules.
+By default, pins A0-A7 are mapped as output modules (switch) and B0-B7 as input modules (sensor).
+To change this configuration, edit the program source code.
+
+For wirings see http://www.skpang.co.uk/blog/archives/454 .</Description>
+  <Group>Raspberry Pi</Group>
+  <Features />
+  <ActivationTime xsi:nil="true" />
+  <TriggerTime xsi:nil="true" />
+  <Type>CSharp</Type>
+  <IsEnabled>false</IsEnabled>
+</ProgramBlock>

@@ -1,0 +1,20 @@
+{
+    "author": "Christophe De Boeck",
+    "version": "v1.0",
+    "title": "SmartIC MCP23017",
+    "description": "Using two MCP23017 I/O expanders",
+    "published": "2015-10-01T00:00:00Z",
+    "sourcecode": "",
+    "homepage": "", 
+    "widgets": [ ],
+    "programs": [
+        { 
+            "file": "SmartIC_MCP23017.hgx",
+            "name":"SmartIC MCP23017",
+            "description": "Using two MCP23017 I/O expanders",
+            "uid": "100311",
+            "group": "Raspberry Pi" 
+        }
+    ],
+    "interfaces": [ ]
+}
