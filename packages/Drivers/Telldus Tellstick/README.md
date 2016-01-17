@@ -4,12 +4,12 @@ HomeGenie / MIG interface driver for TellStick. Tested on TellStick Duo on Raspb
 
 **Before installing this package, follow the instructions below.**
 
-<h3>Features</h3>
+### Features
 Currently the interface supports the following:
-* Turning lights on/off
-* Dimming lights
-* Reading temperature values
-* Simulated two way communication (remote triggers homegenie status)
+- Turning lights on/off
+- Dimming lights
+- Reading temperature values
+- Simulated two way communication (remote triggers homegenie status)
 
 ###Installation Instructions
 ####Install telldus-core
