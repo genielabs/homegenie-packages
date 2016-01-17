@@ -13,7 +13,7 @@
             "name":"Open Weather",
             "description": "Open Weather data",
             "uid": "100601",
-            "group": "Weather and Enviroment" 
+            "group": "Weather and Environment" 
         }
     ],
     "interfaces": [ ]

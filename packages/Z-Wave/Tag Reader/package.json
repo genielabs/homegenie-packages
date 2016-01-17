@@ -1,0 +1,20 @@
+{
+    "author": "Alexandre Schnegg",
+    "version": "v1.0",
+    "title": "Tag Reader",
+    "description": "Example program for the BeNext Tag reader",
+    "published": "2015-02-12T00:00:00Z",
+    "sourcecode": "",
+    "homepage": "", 
+    "widgets": [ ],
+    "programs": [
+        { 
+            "file": "Tag_Reader.hgx",
+            "name":"Tag Reader",
+            "description": "Example program for the BeNext Tag reader",
+            "uid": "100251",
+            "group": "Z-Wave" 
+        }
+    ],
+    "interfaces": [ ]
+}

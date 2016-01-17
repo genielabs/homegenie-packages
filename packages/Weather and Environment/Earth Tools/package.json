@@ -13,7 +13,7 @@
             "name":"Earth Tools",
             "description": "Earth Tools sunrise and sunset data",
             "uid": "100501",
-            "group": "Weather and Enviroment" 
+            "group": "Weather and Environment" 
         }
     ],
     "interfaces": [ ]
