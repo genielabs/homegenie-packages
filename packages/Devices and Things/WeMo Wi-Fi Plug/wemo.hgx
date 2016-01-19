@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="utf-16"?>
+<ProgramBlock xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <ConditionType>OnTrue</ConditionType>
+  <Conditions />
+  <Commands />
+  <ScriptCondition>Program.Setup(()=&gt;{
+    Program.AddInputField("WeMo.IPAddress1", "", "1. IP Address of WeMo Switch 1");
+    Program.AddInputField("WeMo.Refresh", "", "2. Time in seconds between each refresh");
+    Program.AddInputField("WeMo.AlarmAD", "", "3. Activate the activation/désactivation with alarm (1 else 0)");
+
+  	Program.AddVirtualModule("HomeAutomation.WeMo", "1", "Switch", "homegenie/generic/switch");
+});
+
+return true;</ScriptCondition>
+  <ScriptSource>var WeMo_IPAddress1 = Program.InputField("WeMo.IPAddress1").Value;
+var WeMo_AlarmAD = Program.InputField("WeMo.AlarmAD").Value;
+var WeMo_Refresh = Program.InputField("WeMo.Refresh").DecimalValue;
+Action&lt;string,string&gt; 
+Switchhhh = (string AddressIP, string ONOFF) =&gt; {
+if ( ONOFF == "on") {
+  ONOFF = "1";
+}
+if ( ONOFF == "off") {
+  ONOFF = "0";
+}
+  try {
+  var request = Net.WebService("http://"+AddressIP+":49153/upnp/control/basicevent1")
+      .AddHeader("Accept", "")
+      .AddHeader("Content-type", "text/xml; charset=\"utf-8\"")
+      .AddHeader("SOAPACTION", "\"urn:Belkin:service:basicevent:1#SetBinaryState\"")
+      .Post("&lt;?xml version=\"1.0\" encoding=\"utf-8\"?&gt;&lt;s:Envelope xmlns:s=\"http://schemas.xmlsoap.org/soap/envelope/\" s:encodingStyle=\"http://schemas.xmlsoap.org/soap/encoding/\"&gt;&lt;s:Body&gt;&lt;u:SetBinaryState xmlns:u=\"urn:Belkin:service:basicevent:1\"&gt;&lt;BinaryState&gt;"+ONOFF+"&lt;/BinaryState&gt;&lt;/u:SetBinaryState&gt;&lt;/s:Body&gt;&lt;/s:Envelope&gt;");
+  var result = request.GetData();
+  //Program.Notify("WeMo", result);
+    } catch (Exception e) {
+    	Program.Notify("HomeAutomation.WeMo ERROR!", e.Message);
+    }
+};
+When.ModuleParameterChanged( (module, parameter) =&gt;
+{
+  if (WeMo_AlarmAD == "1") {
+    if (module.Is("Security Alarm System") &amp;&amp; parameter.Is("Status.Level") &amp;&amp; parameter.Value == "1")
+    {
+        Switchhhh(WeMo_IPAddress1,"on");
+        return false;
+    }
+    if (module.Is("Security Alarm System") &amp;&amp; parameter.Is("Status.Level") &amp;&amp; parameter.Value == "0")
+    {
+        Switchhhh(WeMo_IPAddress1,"off");
+        return false;
+    }
+  }
+    return true;
+});
+When.WebServiceCallReceived("HomeAutomation.WeMo", (args) =&gt; {
+    string[] reqs = ((string)args).Split('/');
+  	string responseString = ""; 
+  	try
+    {
+      string switchnumber = reqs[1];
+      string command = reqs[2];
+      
+      var virtualMod = Modules.InDomain("HomeAutomation.WeMo").WithAddress(switchnumber).Get();
+      
+      switch(command)
+      {
+            case "Control.On":
+                Program.RaiseEvent(virtualMod,"Status.Level","100","WeMo");
+        		Switchhhh(WeMo_IPAddress1,"on");
+                break;
+            case "Control.Off":
+                Program.RaiseEvent(virtualMod,"Status.Level","0","WeMo");
+        		Switchhhh(WeMo_IPAddress1,"off");
+                break;
+      }
+    } catch (Exception e) {
+    	Program.Notify("HomeAutomation.WeMo ERROR!", e.Message);
+    }
+    if (responseString == "") {
+      return "{ 'ResponseValue' : 'OK' }";
+    } else  {
+      return responseString ;
+    }  
+});
+while (Program.IsEnabled)
+{
+  try {
+  var request2 = Net.WebService("http://"+WeMo_IPAddress1+":49153/upnp/control/basicevent1")
+    .AddHeader("Accept", "")
+    .AddHeader("Content-type", "text/xml; charset=\"utf-8\"")
+    .AddHeader("SOAPACTION", "\"urn:Belkin:service:basicevent:1#GetBinaryState\"")
+    .Post("&lt;?xml version=\"1.0\" encoding=\"utf-8\"?&gt;&lt;s:Envelope xmlns:s=\"http://schemas.xmlsoap.org/soap/envelope/\" s:encodingStyle=\"http://schemas.xmlsoap.org/soap/encoding/\"&gt;&lt;s:Body&gt;&lt;u:GetBinaryState xmlns:u=\"urn:Belkin:service:basicevent:1\"&gt;&lt;BinaryState&gt;1&lt;/BinaryState&gt;&lt;/u:GetBinaryState&gt;&lt;/s:Body&gt;&lt;/s:Envelope&gt;");
+  var result2 = request2.GetData();
+  var virtualMod = Modules.InDomain("HomeAutomation.WeMo").WithAddress("1").Get();
+  if (result2.Contains("1")) {
+	if (virtualMod.IsOff) {
+      Program.RaiseEvent(virtualMod,"Status.Level","100","WeMo");
+    }
+  }
+  if (result2.Contains("0")) {
+	if (virtualMod.IsOn) {
+      Program.RaiseEvent(virtualMod,"Status.Level","0","WeMo");
+    }
+  }
+	} catch (Exception e) {
+    	Program.Notify("HomeAutomation.WeMo ERROR!", e.Message);
+    }
+  Pause(WeMo_Refresh);
+}
+Program.GoBackground();</ScriptSource>
+  <ScriptErrors />
+  <Domain>HomeAutomation.HomeGenie.Automation</Domain>
+  <Address>1038</Address>
+  <Name>WeMo</Name>
+  <Description />
+  <Group>MyScripts</Group>
+  <Features />
+  <ActivationTime>2015-11-12T20:17:18.274045Z</ActivationTime>
+  <TriggerTime>2015-11-12T20:17:19.692653Z</TriggerTime>
+  <Type>CSharp</Type>
+  <IsEnabled>true</IsEnabled>
+</ProgramBlock>

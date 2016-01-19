@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-16"?>
+<ProgramBlock xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <ConditionType>OnTrue</ConditionType>
+  <Conditions />
+  <Commands />
+  <ScriptCondition>// Put your trigger code logic here.
+// To execute the Code To Run,
+// use a 'return true' or 'return false' otherwise.
+Program.Setup( () =&gt; {
+  // set the widget
+  Program.AddControlWidget("homegenie/generic/sensor");
+  Program.Parameter("Widget.DisplayIcon").Value = "images/youless.png";
+
+  // set input fields parameters
+  Program.AddInputField("IPAddress", "192.168.*.*", "YouLess IP address");
+  Program.AddInputField("Port", "80", "YouLess Port number");
+  Program.AddInputField("UpdateInterval", "30", "Update interval in seconds. Default is 30 seconds.");
+  
+  // setup program parameters
+  Program.Parameter("Meter.Total").Value = "";
+  Program.Parameter("Meter.Watts").Value = "";
+});
+
+return true;</ScriptCondition>
+  <ScriptSource>while (Program.IsEnabled)
+{
+  string IPAddress = Program.InputField("IPAddress").Value;
+  string Port = Program.InputField("Port").Value;
+  int UpdateInterval = int.Parse(Program.InputField("UpdateInterval").Value);
+  
+  if (IPAddress != "192.168.*.*")
+  {
+     try
+     {
+       string webserviceurl = "http://" + IPAddress + ":" + Port + "/a?f=j";
+       var youlessData = Net.WebService(webserviceurl).GetData();
+
+       string totalWattHours = youlessData.cnt.ToString();
+       int currentWatts = int.Parse(youlessData.pwr.ToString());
+       
+       if (currentWatts.ToString() != Program.Parameter("Meter.Watts").Value)
+       {
+         Program.Parameter("Meter.Total").Value = totalWattHours;
+         Program.Parameter("Meter.Watts").Value = currentWatts.ToString();
+
+         Program.Notify("YouLess", currentWatts.ToString() + " Watts");
+       }
+     }
+     catch (Exception e) 
+     {
+        Program.Notify("YouLess ERROR!", "Error retrieving YouLess data!");
+       	//Program.Parameter("YouLess.Current").Value = "ERROR: " + e.Message;
+        Console.WriteLine( e.Message );
+        Pause(5);
+     }
+   }
+  Pause(UpdateInterval); // pause before next check
+}
+</ScriptSource>
+  <ScriptErrors>[]</ScriptErrors>
+  <IsRunning>true</IsRunning>
+  <Features />
+  <LastConditionEvaluationResult>true</LastConditionEvaluationResult>
+  <Domain>HomeAutomation.HomeGenie.Automation</Domain>
+  <Address>1083</Address>
+  <Name>Youless Energy Monitor</Name>
+  <Description>Retrieves energy usage from the YouLess energy monitor (www.youless.nl)</Description>
+  <Group>Energy Management</Group>
+  <ActivationTime>2014-10-25T08:01:04.987156Z</ActivationTime>
+  <TriggerTime>2014-10-25T08:01:05.934599Z</TriggerTime>
+  <Type>CSharp</Type>
+  <IsEnabled>true</IsEnabled>
+</ProgramBlock>

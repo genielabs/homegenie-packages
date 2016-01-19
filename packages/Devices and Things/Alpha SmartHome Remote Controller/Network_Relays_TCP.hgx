@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="utf-16"?>
+<ProgramBlock xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <ConditionType>OnTrue</ConditionType>
+  <Conditions />
+  <Commands />
+  <ScriptCondition>    Program.AddOption("IPAddress", "10.1.1.?", "0. Enter IP address of Network Relays", "text");
+  	Program.AddOption("Port", "6000", "1. Enter port of Network relays", "text");
+	Program.AddVirtualModules("HomeAutomation.NetworkRelays", "Light", "homegenie/generic/light", 1, 8);
+
+Program.Run();
+</ScriptCondition>
+  <ScriptSource>//Alpha Smart Home remote controller (8 relays)
+var NetworkRelaysModules = Modules.InDomain("HomeAutomation.NetworkRelays");
+Program.Parameter("Status.Level").Value = "1";
+	string server = Program.Option("IPAddress").Value.Trim();
+	string port = Program.Option("Port").Value.Trim();
+
+//Get status command
+byte[] getstatus = new byte[] {85,170,170,170,170,170,0,1,47,215,22}; 
+
+Action&lt;string&gt; HandleStringReceived = (string message) =&gt; {
+ Program.Notify("Server String", message);
+};
+
+Action&lt;byte[]&gt; HandleMessageReceived = (byte[] message) =&gt; {
+   if ((message.Length == 17)&amp;&amp; message[6] == 128) //status message received 
+    {
+     int value =  message[14];
+	 var relayarray = Convert.ToString(value, 2).PadLeft(8, '0').ToArray();   
+     for (int i=0;i&lt;8;i++)
+     {
+     var module = NetworkRelaysModules.WithAddress((8-i).ToString()).Get();
+	 // Relay status changed by wall switch (!=)
+ 	 if ((module.Parameter("Status.Level").DecimalValue).ToString() != relayarray[i].ToString())
+  	 {
+       module.Toggle();
+     }
+     }   
+    }
+    else 
+   {
+    TcpClient.SendMessage(getstatus);
+   }
+};
+
+Action&lt;bool&gt; HandleStatusChanged = (bool connected) =&gt; {
+  Program.Notify("TCP Client", "Connected = " + connected);
+  
+};
+
+When.WebServiceCallReceived("HomeAutomation.NetworkRelays", ( args ) =&gt; 
+{
+  string[] reqs = ((string)args).Split('/');
+  var res = "{ 'ResponseValue' : 'ERROR' }";
+  try
+  {
+    string switchnumber = reqs[1];
+    string command = reqs[2];
+    var module = NetworkRelaysModules.WithAddress(switchnumber).Get();
+    byte[] relayon = new byte[] {85,170,170,170,170,170,3,6,Convert.ToByte(127 + Convert.ToInt32(switchnumber)),0,0,0,0,0,Convert.ToByte(47 + Convert.ToInt32(switchnumber)),22}; 
+    byte[] relayoff = new byte[] {85,170,170,170,170,170,3,6,Convert.ToByte(143 + Convert.ToInt32(switchnumber)),0,0,0,0,0,Convert.ToByte(63 + Convert.ToInt32(switchnumber)),22}; 
+  switch(command)
+  {
+    case "Control.On":
+       if (module.Parameter("Status.Level").Value != "1")
+         {
+       		Program.RaiseEvent(module, "Status.Level", "1", "NetworkRelays");
+       		TcpClient.SendMessage(relayon); 
+       		Pause(1);
+    	 }
+       res = "{ 'ResponseValue' : 'OK' }";
+      break;
+    case "Control.Off":
+       if (module.Parameter("Status.Level").Value != "0")
+         {
+      	    Program.RaiseEvent(module, "Status.Level", "0", "NetworkRelays");
+       		TcpClient.SendMessage(relayoff); 
+       		Pause(1);    
+        }
+       res = "{ 'ResponseValue' : 'OK' }";
+      break;
+    case "Control.Toggle":
+      if (module.Parameter("Status.Level").DecimalValue == 0)
+      {
+       Program.RaiseEvent(module, "Status.Level", "1", "NetworkRelays");
+       TcpClient.SendMessage(relayon); 
+       Pause(1);        
+       res = "{ 'ResponseValue' : 'OK' }";
+      }
+      else
+      {
+       Program.RaiseEvent(module, "Status.Level", "0", "NetworkRelays");
+       TcpClient.SendMessage(relayoff); 
+       Pause(1);        
+       res = "{ 'ResponseValue' : 'OK' }";
+      }
+      break;
+  }
+  } 
+  catch (Exception e) 
+    {
+        Program.Notify("HomeAutomation.NetworkRelays ERROR", e.Message);
+	    res = e.Message + " " + e.StackTrace;
+	}
+  return res;
+});
+   			TcpClient
+  				.OnMessageReceived( HandleMessageReceived )
+                .OnStringReceived( HandleStringReceived ) 
+			    .OnStatusChanged( HandleStatusChanged )
+  				.Service( server );
+              
+while (Program.IsEnabled)
+{
+
+	if (!TcpClient.IsConnected) 
+    {
+  		if (!String.IsNullOrWhiteSpace(server) &amp;&amp; !server.EndsWith("?") &amp;&amp; !String.IsNullOrWhiteSpace(port))
+   		{
+   			TcpClient
+  				.Connect( Convert.ToInt32(port) );
+          	    
+        }
+      	else
+        {
+          	Program.Notify("Network Relays", "Please, configure the IP address well!");
+        }
+    } 
+   
+ 	Pause(5);
+}
+Program.GoBackground();</ScriptSource>
+  <ScriptErrors>[]</ScriptErrors>
+  <Domain>HomeAutomation.HomeGenie.Automation</Domain>
+  <Address>1010</Address>
+  <Name>Network Relays TCP</Name>
+  <Description>Network relay modul controller</Description>
+  <Group>Relays</Group>
+  <Features />
+  <ActivationTime>2015-11-10T10:49:12.21413Z</ActivationTime>
+  <TriggerTime xsi:nil="true" />
+  <Type>CSharp</Type>
+  <IsEnabled>true</IsEnabled>
+</ProgramBlock>
