@@ -1,0 +1,20 @@
+{
+    "author": "genielabs",
+    "version": "v1.0",
+    "title": "Eden Board V1 Buttons Menu",
+    "description": "Eden Board V1 Options Menu controlled by GPIO buttons",
+    "published": "2015-02-12T00:00:00Z",
+    "sourcecode": "",
+    "homepage": "", 
+    "widgets": [ ],
+    "programs": [
+        { 
+            "file": "Eden_Oled_Menu_GPIO.hgx",
+            "name":" Eden Board V1 Buttons Menu",
+            "description": "Eden Board V1 Options Menu controlled by GPIO buttons",
+            "uid": "100352",
+            "group": "Raspberry Pi" 
+        }
+    ],
+    "interfaces": [ ]
+}

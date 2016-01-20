@@ -1,0 +1,20 @@
+{
+    "author": "genielabs",
+    "version": "v1.0",
+    "title": "Eden Board V1 Display",
+    "description": "Eden Board V1 data display on SSD1306 OLED",
+    "published": "2015-02-12T00:00:00Z",
+    "sourcecode": "",
+    "homepage": "", 
+    "widgets": [ ],
+    "programs": [
+        { 
+            "file": "Eden_Oled_Display.hgx",
+            "name":" Eden Board V1 Display",
+            "description": "Eden Board V1 data display on SSD1306 OLED",
+            "uid": "100351",
+            "group": "Raspberry Pi" 
+        }
+    ],
+    "interfaces": [ ]
+}

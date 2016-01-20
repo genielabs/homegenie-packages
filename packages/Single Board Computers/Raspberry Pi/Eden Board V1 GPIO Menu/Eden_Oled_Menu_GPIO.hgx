@@ -1,0 +1,303 @@
+<?xml version="1.0" encoding="utf-16"?>
+<ProgramBlock xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <ConditionType>OnTrue</ConditionType>
+  <Conditions />
+  <Commands />
+  <ScriptCondition>hg.Program.AddOption("EdenDisplay.Thermostat", "", "Thermostat name", "text");
+hg.Program.AddOption("EdenDisplay.ButtonProgram.1", "", "Button #1 program", "text");
+hg.Program.AddOption("EdenDisplay.ButtonProgram.2", "", "Button #2 program", "text");
+hg.Program.AddOption("EdenDisplay.ButtonProgram.3", "", "Button #3 program", "text");
+hg.Program.AddOption("EdenDisplay.ButtonProgram.4", "", "Button #4 program", "text");
+hg.Program.AddFeature("", "Dimmer,Light,Switch,Shutter", "EdenDisplay.ToggleButton.1", "Toggle by button #1", "checkbox");
+hg.Program.AddFeature("", "Dimmer,Light,Switch,Shutter", "EdenDisplay.ToggleButton.2", "Toggle by button #2", "checkbox");
+hg.Program.AddFeature("", "Dimmer,Light,Switch,Shutter", "EdenDisplay.ToggleButton.3", "Toggle by button #3", "checkbox");
+hg.Program.AddFeature("", "Dimmer,Light,Switch,Shutter", "EdenDisplay.ToggleButton.4", "Toggle by button #4", "checkbox");
+hg.Program.Run();
+</ScriptCondition>
+  <ScriptSource>// Get a reference to the OLED object
+var oled = hg.Modules.InDomain("Components.Ssd1306").WithAddress("0");
+
+// Get a reference to other programs of which data will be displayed on the OLED screen
+var thermostatName = hg.Program.Option("EdenDisplay.Thermostat").Value;
+var thermostat = hg.Modules.WithName(thermostatName).Get();
+var setPoint = thermostat.Parameter("Thermostat.SetPoint.Heating");
+var securitySystem = hg.Modules.WithName("Security Alarm System").Get();
+var securityArmed = securitySystem.Parameter("HomeGenie.SecurityArmed");
+
+// Global state variables
+var currentContext = '';
+var displayMode = 'normal';
+var lastButton = '';
+var startPressTs = new Date().getTime();
+// This system wide parameter is used to prevent other apps
+// from writing on the OLED screen  when the menu is open
+hg.Settings.Parameter('EdenDisplay.MenuMode').Value = 'OFF';
+
+// Menu screens
+
+function menuShowMain()
+{
+  oled.Command("Oled.GoTo").Execute("0/3");
+  oled.Command("Oled.DrawText").Execute("----[ MENU ]----");
+  oled.Command("Oled.GoTo").Execute("0/4");
+  oled.Command("Oled.DrawText").Execute("1 Set Point/LEFT");
+  oled.Command("Oled.GoTo").Execute("0/5");
+  oled.Command("Oled.DrawText").Execute("2 Security/LEFT");
+  oled.Command("Oled.GoTo").Execute("0/6");
+  oled.Command("Oled.DrawText").Execute("3 Invert Display/LEFT");
+  oled.Command("Oled.GoTo").Execute("0/7");
+  oled.Command("Oled.DrawText").Execute("4 Exit/LEFT");
+}
+
+function menuShowSetPoint()
+{
+  oled.Command("Oled.GoTo").Execute("0/3");
+  oled.Command("Oled.DrawText").Execute("/LEFT");
+  oled.Command("Oled.GoTo").Execute("0/4");
+  oled.Command("Oled.DrawText").Execute("Set Point:/LEFT");
+  oled.Command("Oled.GoTo").Execute("0/5");
+  oled.Command("Oled.DrawText2").Execute(setPoint.Value + "/CENTER");
+  oled.Command("Oled.GoTo").Execute("0/7");
+  oled.Command("Oled.DrawText").Execute("2 + 3 -   EXIT 4/CENTER");  
+}
+
+function menuShowSecurity()
+{
+  var level = securitySystem.Parameter("Status.Level");
+  oled.Command("Oled.GoTo").Execute("0/3");
+  oled.Command("Oled.DrawText").Execute("/LEFT");
+  oled.Command("Oled.GoTo").Execute("0/4");
+  oled.Command("Oled.DrawText").Execute("Security:/LEFT");
+  oled.Command("Oled.GoTo").Execute("0/5");
+  oled.Command("Oled.DrawText2").Execute((securityArmed.DecimalValue &gt; 0 || level.DecimalValue &gt; 0 ? "ARMED" : "DISARMED") + "/CENTER");
+  oled.Command("Oled.GoTo").Execute("0/7");
+  if (securityArmed.DecimalValue &gt; 0 || level.DecimalValue &gt; 0)
+  {
+    oled.Command("Oled.DrawText").Execute("2 DISARM  EXIT 4/CENTER");
+  }
+  else
+  {
+    oled.Command("Oled.DrawText").Execute("2 ARM     EXIT 4/CENTER");
+  }
+}
+
+// Context switch functions
+
+function setContext(ctx)
+{
+  currentContext = ctx;
+  hg.Settings.Parameter('EdenDisplay.MenuMode').Value = 'ON';
+  switch(ctx)
+  {
+    case 'main':
+      menuShowMain();
+      break;
+    case 'setpoint':
+      menuShowSetPoint();
+      break;
+    case 'security':
+      menuShowSecurity();
+      break;
+    case 'energysaving':
+      menuShowEnergySaving();
+      break;
+    case 'exit':
+      oled.Command("Oled.GoTo").Execute("0/3");
+      oled.Command("Oled.DrawText").Execute("/CENTER");
+      oled.Command("Oled.GoTo").Execute("0/4");
+      oled.Command("Oled.ShowLogo").Execute();
+      hg.Pause(2);
+      hg.Settings.Parameter('EdenDisplay.MenuMode').Value = 'OFF';
+      break;
+  }
+}
+
+function setContextInput(input)
+{
+  switch (input)
+  {
+    case '1': // BUTTON #1
+      switch (currentContext)
+      {
+        case 'main':
+          setContext('setpoint');
+          break;
+      }
+      break;
+    case '2': // BUTTON #2
+      switch (currentContext)
+      {
+        case 'main':
+          setContext('security');
+          break;
+        case 'setpoint':
+          thermostat.Command("Thermostat.SetPointSet").Execute("Heating/" + (setPoint.DecimalValue + 1));
+          menuShowSetPoint();
+          break;
+        case 'security':
+          if (securityArmed.DecimalValue == 0)
+          {
+            securitySystem.Command("Control.On").Execute();
+          }
+          else
+          {
+            securitySystem.Command("Control.Off").Execute();
+          }
+          menuShowSecurity();
+          break;
+      }
+      break;
+    case '3': // BUTTON #3
+      switch (currentContext)
+      {
+        case 'main':
+          if (displayMode == 'normal')
+          {
+            displayMode = 'inverse';
+            oled.Command("Oled.DisplayInvert").Execute();
+          }
+          else
+          {
+            displayMode = 'normal';
+            oled.Command("Oled.DisplayNormal").Execute();
+          }
+          break;
+        case 'setpoint':
+          thermostat.Command("Thermostat.SetPointSet").Execute("Heating/" + (setPoint.DecimalValue - 1));
+          menuShowSetPoint();
+          break;
+      }
+      break;
+    case '4': // BUTTON #4
+      switch (currentContext)
+      {
+        case 'main':
+          setContext('exit');
+          break;
+        default:
+          setContext('main');
+          break;
+      }
+      break;
+  }
+
+}
+
+hg.When.ModuleParameterChange(function(module, parameter){
+  if (module.Instance.Domain == 'RaspberryPi.Gpio' &amp;&amp; parameter.Is("Status.Level") &amp;&amp; parameter.DecimalValue &gt; 0)
+  {
+    // A button was pressed, store the timestamp
+    startPressTs = new Date().getTime();
+    if (currentContext == '')
+    {
+      // A long press of 3 seconds will open the settings menu
+      var duration = 0;
+      while (duration &lt; 3 &amp;&amp; parameter.DecimalValue &gt; 0)
+      {
+          hg.Pause(1);
+          duration++;
+      }
+      if (duration &gt;= 3) setContext('main');
+      return true;
+    }
+    //
+    // The input is only processed when the settings menu is opened
+    switch (module.Instance.Address)
+    {
+        // BUTTON #1 pressed
+      case 'GPIO22': 
+        setContextInput('1');
+        break;
+        // BUTTON #2 pressed
+      case 'GPIO23':
+        setContextInput('2');
+        break;
+        // BUTTON #3 pressed
+      case 'GPIO24':
+        setContextInput('3');
+        break;
+        // BUTTON #4 pressed
+      case 'GPIO25':
+        setContextInput('4');
+        break;
+    }
+  }
+  else if (module.Instance.Domain == 'RaspberryPi.Gpio' &amp;&amp; parameter.Is("Status.Level") &amp;&amp; parameter.DecimalValue == 0)
+  {
+    // A button was released
+    var currentTs = new Date().getTime();
+    if (currentContext == 'exit')
+    {
+      currentContext = '';
+    }
+    else if (currentContext == '' &amp;&amp; currentTs - startPressTs &lt; 3000) // 3 seconds
+    {
+      // We are outside the settings menu, so
+      // the buttons functionality is to toggle scenarios/devices
+      lastButton = '';
+      switch (module.Instance.Address)
+      {
+          // BUTTON #1 released
+        case 'GPIO22': 
+          lastButton = '1';
+          break;
+          // BUTTON #2 released
+        case 'GPIO23': 
+          lastButton = '2';
+          break;
+          // BUTTON #3 released
+        case 'GPIO24': 
+          lastButton = '3';
+          break;
+          // BUTTON #4 released
+        case 'GPIO25':
+          lastButton= '4';
+          break;
+      }
+      if (lastButton != '')
+      {
+        hg.Modules.WithFeature("EdenDisplay.ToggleButton." + lastButton).Toggle();
+        var program = hg.Program.Option("EdenDisplay.ButtonProgram." + lastButton).Value;
+        // scenarios are specified in the form &lt;program_id_or_name&gt;/&lt;options&gt;
+        if (program != '')
+        {
+          // it is a scenario
+          var options = '';
+          if (program.lastIndexOf('/') &gt; 0) 
+          {
+            options = program.substring(program.lastIndexOf('/') + 1);
+            program = program.substring(0, program.lastIndexOf('/'));
+          }
+          hg.Program.Run(program, options);
+        }
+      }
+    }
+    // Reset long press timestamp
+    startPressTs = new Date().getTime();
+  }
+  else if (parameter.Is("HomeGenie.SecurityArmed") &amp;&amp; currentContext == "security")
+  {
+    // update security menu
+    menuShowSecurity();
+  }
+  return true;
+});
+
+hg.Program.GoBackground();
+</ScriptSource>
+  <ScriptErrors>[]</ScriptErrors>
+  <Domain>HomeAutomation.HomeGenie.Automation</Domain>
+  <Address>66</Address>
+  <Name>Eden Oled Menu</Name>
+  <Description>Implement a settings menu for Eden Oled Display.
+It requires 4 input buttons connected to GPIO#22,#23,#24,#25.
+A long press of at least 3 seconds will open the settings menu.
+A normal press will toggle scenarios/devices associated to the buttons.
+</Description>
+  <Group>Raspberry Pi</Group>
+  <Features />
+  <ActivationTime xsi:nil="true" />
+  <TriggerTime xsi:nil="true" />
+  <Type>Javascript</Type>
+  <IsEnabled>false</IsEnabled>
+</ProgramBlock>

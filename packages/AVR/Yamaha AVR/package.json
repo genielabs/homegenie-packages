@@ -1,0 +1,26 @@
+{
+    "author": "dansantee (CptJack)",
+    "version": "v1.0",
+    "title": "Yamaha AVR",
+    "description": "Control Yamaha AVR",
+    "published": "2014-02-06T00:00:00Z",
+    "sourcecode": "",
+    "homepage": "", 
+    "widgets": [
+        { 
+            "file": "Yamaha_AVR.zip",
+            "name":"Yamaha AVR",
+            "description": "Widget for controlling Yamaha AVR"
+        }
+    ],
+    "programs": [
+        { 
+            "file": "Yamaha_AVR.hgx",
+            "name":"Yamaha AVR",
+            "description": "Control Yamaha AVR",
+            "uid": "100521",
+            "group": "AVR" 
+        }
+    ],
+    "interfaces": [ ]
+}

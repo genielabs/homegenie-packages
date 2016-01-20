@@ -1,0 +1,231 @@
+<?xml version="1.0" encoding="utf-16"?>
+<ProgramBlock xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <ConditionType>OnTrue</ConditionType>
+  <Conditions />
+  <Commands />
+  <ScriptCondition>// Put your trigger code logic here.
+// To execute the Code To Run,
+// use a 'return true' or 'return false' otherwise.
+return true;
+</ScriptCondition>
+  <ScriptSource>// Eden Board v2 app
+const string EDEN_DOMAIN = "HomeAutomation.Eden";
+
+// add a virtual module of type sensor
+Program.AddVirtualModule(EDEN_DOMAIN, "1","Sensor", "homegenie/generic/sensor");
+var sensorModule = Modules.InDomain(EDEN_DOMAIN).WithAddress("1").Get();
+
+// get a reference to Arduino (MCU) module for calling internal web service
+Program.AddVirtualModule(EDEN_DOMAIN, "MCU","Sensor", "");
+var arduino = Modules.InDomain(EDEN_DOMAIN).WithAddress("MCU");
+
+// get a reference to Energy Monitor and Weather Underground programs
+var energyLoad = Program.WithName("Energy Monitor").Parameter("EnergyMonitor.KwLoad");
+var weather = Program.WithName("Weather Underground");
+
+// SPI communication with onboard Arduino
+var driver = GpioConnectionSettings.DefaultDriver;
+
+var adcClock = ConnectorPin.P1Pin23.ToProcessor();
+var adcMiso = ConnectorPin.P1Pin21.ToProcessor();
+var adcMosi = ConnectorPin.P1Pin19.ToProcessor();
+var adcCs = ConnectorPin.P1Pin24.ToProcessor();
+var interrupt = ConnectorPin.P1Pin18.ToProcessor();
+
+driver.Allocate(adcClock, PinDirection.Output);
+driver.Allocate(adcCs, PinDirection.Output);
+driver.Allocate(adcMosi, PinDirection.Output);
+driver.Allocate(adcMiso, PinDirection.Input);
+
+var sendCommand = new Func&lt;string, bool&gt;((txt)=&gt;{
+  lock (this)
+  {
+    txt += "\n"; // append end of command character
+    using (var adcConnection = new Raspberry.IO.SerialPeripheralInterface.SpiConnection(
+      driver.Out(adcClock),
+      driver.Out(adcCs),
+      driver.In(adcMiso),
+      driver.Out(adcMosi), Raspberry.IO.SerialPeripheralInterface.Endianness.LittleEndian))
+    {
+      using(adcConnection.SelectSlave())
+      {
+        driver.Allocate(interrupt, PinDirection.Output);
+        for(int x = 0; x &lt; txt.Length; x++)
+        {
+          driver.Write(interrupt, true);
+          adcConnection.Write((byte)txt[x], 8);
+          driver.Write(interrupt, false);
+        }
+      }
+    }
+  }
+  return true;
+});
+var readResponse = new Func&lt;string&gt;(()=&gt;{
+  string response = "";
+  lock(this)
+  {
+    using (var adcConnection = new Raspberry.IO.SerialPeripheralInterface.SpiConnection(
+      driver.Out(adcClock),
+      driver.Out(adcCs),
+      driver.In(adcMiso),
+      driver.Out(adcMosi), Raspberry.IO.SerialPeripheralInterface.Endianness.LittleEndian))
+    {
+      using(adcConnection.SelectSlave())
+      {
+        // Wait the slave to set interrupt to high before start reading
+        driver.Allocate(interrupt, PinDirection.Input);
+        Pause(0.1);
+        while(!driver.Read(interrupt)); //TODO: add timeout handling here to avoid loops
+        // Read data from SPI
+        int len = 0; char c = '\0';
+        while (c != '\n' &amp;&amp; len &lt; 128)
+        {
+          uint i = (uint)adcConnection.Read(8);
+          c = (char)(i/2); response += c;
+          len++;
+        }
+        driver.Allocate(interrupt, PinDirection.Output);      
+      }
+      //Program.Notify("HG2Arduino", "&lt;pre&gt;" + response + "&lt;/pre&gt;");
+    }
+  }
+  sendCommand(""); // clear buffer 
+  return response.Replace("\n", "");
+});
+
+// handles web service calls
+When.WebServiceCallReceived(EDEN_DOMAIN, (args)=&gt;{
+  var response = "{ 'ResponseValue' : 'OK' }";
+  var cmdParts = args.ToString().Split('/');
+  if (cmdParts.Length &lt; 3) return false;
+  //
+  var nodeId = cmdParts[1];
+  var command = cmdParts[2];
+  var argument = ""; if (cmdParts.Length &gt; 3) argument = cmdParts[3];
+  //
+  if (nodeId == "MCU") // control the OLED display
+  {
+    switch(command)
+    {
+      case "Oled.ClearScreen":
+      	sendCommand("clearscreen");
+      	break;
+      case "Oled.GoTo":
+      	sendCommand("goto " + argument);
+      	break;
+      case "Oled.ShowLogo":
+      	sendCommand("showlogo");
+      	break;
+      case "Oled.DrawText":
+      case "Oled.DrawText2":
+      case "Oled.DrawText3":
+        var align="LEFT";
+        if (cmdParts.Length &gt; 4)
+        {
+          // align argument is the 5th parameter
+          align = cmdParts[4].ToUpper();
+        }
+        var text = argument.Replace("%20", " ");
+        switch (align)
+        {
+          case "LEFT":
+          text = text.PadRight(16, ' ');
+          break;
+          case "RIGHT":
+          text = text.PadLeft(16, ' ');
+          break;
+          case "CENTER":
+          int spaces = 16 - text.Length; if (spaces &lt; 0) spaces = 0;
+          int padLeft = (spaces / 2) + text.Length;
+          text = text.PadLeft(padLeft).PadRight(16);          
+          break;
+        }
+      	if (command.EndsWith("2"))
+        {
+          sendCommand("showtext2 " + text);
+        }
+      	else if (command.EndsWith("3"))
+        {
+          sendCommand("showtext3 " + text);
+        }
+      	else
+        {
+          sendCommand("showtext " + text);
+        }
+      	break;
+      case "Sensors.Update":
+      	sendCommand("update");
+      	break;
+      case "Sensors.Luminance":
+        sendCommand("luminance");
+        var luminance = readResponse();
+        Program.RaiseEvent(sensorModule, "Sensor.Luminance", luminance, "Eden Sensor Module");
+  		response = "{ 'ResponseValue' : '" + luminance + "' }";
+      	break;
+      case "Sensors.Temperature":
+        sendCommand("temperature");
+        var temperature = readResponse();
+        Program.RaiseEvent(sensorModule, "Sensor.Temperature", temperature, "Eden Sensor Module");
+  		response = "{ 'ResponseValue' : '" + temperature + "' }";
+      	break;
+    }
+  }
+  return response;
+});
+
+// Initialize the display
+arduino.Command("Oled.GoTo").Execute("0,3");
+
+// Main app loop for updating time and sensor values
+while (Program.IsEnabled)
+{
+
+  // Clear line 4
+  arduino.Command("Oled.GoTo").Execute("0,3");
+  arduino.Command("Oled.DrawText").Execute("/CENTER");
+  
+  // Current date time
+  var today = DateTime.Now;
+  var displayTime = String.Format("{0:h:mm tt}", today);
+  var displayDate = String.Format("{0:ddd, MMM d}", today); 
+  arduino.Command("Oled.GoTo").Execute("0,4");
+  arduino.Command("Oled.DrawText2").Execute(displayDate + "/CENTER");
+  arduino.Command("Oled.GoTo").Execute("0,6");
+  arduino.Command("Oled.DrawText2").Execute(displayTime + "/CENTER");
+  
+  Pause(5);
+  
+  // Weather Underground data  
+  var weatherText = weather.Parameter("Conditions.City").Value + " " + weather.Parameter("Conditions.TemperatureC").Value + "\\";
+  arduino.Command("Oled.GoTo").Execute("0,4");
+  arduino.Command("Oled.DrawText2").Execute(weatherText + "/CENTER");
+  arduino.Command("Oled.GoTo").Execute("0,6");
+  arduino.Command("Oled.DrawText2").Execute(weather.Parameter("Conditions.Description").Value + "/CENTER");
+
+  Pause(5);
+
+  // Energy monitor Kw Load
+  arduino.Command("Oled.GoTo").Execute("0,4");
+  arduino.Command("Oled.DrawText2").Execute("Energy Use kW/CENTER");
+  arduino.Command("Oled.GoTo").Execute("0,6");
+  arduino.Command("Oled.DrawText2").Execute(Math.Round(energyLoad.DecimalValue, 1) + "/CENTER");
+  
+  Pause(5);
+  
+}</ScriptSource>
+  <ScriptErrors>[]</ScriptErrors>
+  <IsRunning>true</IsRunning>
+  <Features />
+  <LastConditionEvaluationResult>true</LastConditionEvaluationResult>
+  <Domain>HomeAutomation.HomeGenie.Automation</Domain>
+  <Address>1002</Address>
+  <Name>Eden Module</Name>
+  <Description>Adds a sensor module for showing temperature and luminace value read from onboard Arduino hardware.
+It also implements web service API for controlling the OLED display.</Description>
+  <Group>Raspberry Pi</Group>
+  <ActivationTime>2014-12-27T01:23:42.723849Z</ActivationTime>
+  <TriggerTime>2014-12-27T01:23:43.195264Z</TriggerTime>
+  <Type>CSharp</Type>
+  <IsEnabled>true</IsEnabled>
+</ProgramBlock>
