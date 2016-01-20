@@ -12,7 +12,7 @@
             "file": "MiLight_Control.hgx",
             "name":"MiLight Control",
             "description": "Control MiLight and EasyBulb Lights",
-            "uid": "100505",
+            "uid": "28",
             "group": "Devices and Things" 
         }
     ],

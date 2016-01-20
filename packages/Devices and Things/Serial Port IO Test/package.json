@@ -12,7 +12,7 @@
             "file": "Serial_Port_IO.hgx",
             "name":"Serial Port I/O",
             "description": "Serial Port example",
-            "uid": "100507",
+            "uid": "132",
             "group": "Devices and Things" 
         }
     ],

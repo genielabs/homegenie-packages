@@ -12,7 +12,7 @@
             "file": "Led_Bar.hgx",
             "name":"Grove Led Bar",
             "description": "Controlling a Grove Led Bar",
-            "uid": "100305",
+            "uid": "60",
             "group": "Raspberry Pi" 
         }
     ],

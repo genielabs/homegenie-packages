@@ -12,7 +12,7 @@
             "file": "HD44780_LCD_PCF8574.hgx",
             "name":"HD44780 LCD PCF8574",
             "description": "Using HD44780 LCD with PCF8574 I2C I/O expander",
-            "uid": "100307",
+            "uid": "67",
             "group": "Raspberry Pi" 
         }
     ],

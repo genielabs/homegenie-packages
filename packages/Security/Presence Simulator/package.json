@@ -12,7 +12,7 @@
             "file": "Presence_Simulator.hgx",
             "name":"Presence Simulator",
             "description": "Randomly runs a scenario to simulate presence.",
-            "uid": "100509",
+            "uid": "144",
             "group": "Security" 
         }
     ],

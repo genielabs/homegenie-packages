@@ -12,7 +12,7 @@
             "file": "MCP3008_Keypad_Input.hgx",
             "name":"MCP3008 Keypad Input",
             "description": "Using 3x4 numeric keypad connected to one MCP3008 analog channel",
-            "uid": "100309",
+            "uid": "41",
             "group": "Raspberry Pi" 
         }
     ],

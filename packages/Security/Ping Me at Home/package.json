@@ -12,7 +12,7 @@
             "file": "Ping_Me_at_Home.hgx",
             "name":"Ping Me at Home",
             "description": "Detect user proximity by pinging his mobile device",
-            "uid": "100508",
+            "uid": "154",
             "group": "Security" 
         }
     ],

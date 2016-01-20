@@ -12,7 +12,7 @@
             "file": "SmartIC_MCP23017.hgx",
             "name":"SmartIC MCP23017",
             "description": "Using two MCP23017 I/O expanders",
-            "uid": "100311",
+            "uid": "79",
             "group": "Raspberry Pi" 
         }
     ],

@@ -12,7 +12,7 @@
             "file": "Eden_Oled_Display.hgx",
             "name":" Eden Board V1 Display",
             "description": "Eden Board V1 data display on SSD1306 OLED",
-            "uid": "100351",
+            "uid": "65",
             "group": "Raspberry Pi" 
         }
     ],

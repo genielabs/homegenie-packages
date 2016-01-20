@@ -12,7 +12,7 @@
             "file": "KNX_Modules.hgx",
             "name":"KNX modules",
             "description": "KNX device modules",
-            "uid": "100504",
+            "uid": "27",
             "group": "Devices and Things" 
         }
     ],

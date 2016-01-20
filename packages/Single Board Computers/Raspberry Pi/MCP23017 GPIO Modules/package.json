@@ -12,7 +12,7 @@
             "file": "MCP23017_GPIO_Modules.hgx",
             "name":"MCP23017 GPIO Modules",
             "description": "MCP23017 expander GPIO mapped to HG modules",
-            "uid": "100310",
+            "uid": "71",
             "group": "Raspberry Pi" 
         }
     ],

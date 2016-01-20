@@ -12,7 +12,7 @@
             "file": "GPIO_Modules.hgx",
             "name":"Raspberry Pi GPIO Modules",
             "description": "Raspberry Pi GPIO mapped to HG modules",
-            "uid": "100303",
+            "uid": "100",
             "group": "Raspberry Pi" 
         }
     ],

@@ -12,7 +12,7 @@
             "file": "DHT-22_Sensor.hgx",
             "name":"DHT-22 Sensor Module",
             "description": "DHT-22 Module for displaying temperature and humidity",
-            "uid": "100302",
+            "uid": "63",
             "group": "Raspberry Pi" 
         }
     ],

@@ -12,7 +12,7 @@
             "file": "One-Wire_Devices.hgx",
             "name":"One-Wire Modules",
             "description": "One-Wire integration",
-            "uid": "100506",
+            "uid": "133",
             "group": "Devices and Things" 
         }
     ],

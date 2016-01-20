@@ -12,7 +12,7 @@
             "file": "HCSR04_Ultrasonic_Ranging_Module.hgx",
             "name":"HCSR04 Ultrasonic Ranging Module",
             "description": "Display data from HCSR04 Ultrasonic Ranging Module",
-            "uid": "100306",
+            "uid": "37",
             "group": "Raspberry Pi" 
         }
     ],

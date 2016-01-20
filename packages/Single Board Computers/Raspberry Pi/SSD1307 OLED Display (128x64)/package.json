@@ -12,7 +12,7 @@
             "file": "SSD1306_OLED.hgx",
             "name":"SSD1306 OLED display",
             "description": "Controlling SSD1306 OLED",
-            "uid": "100312",
+            "uid": "64",
             "group": "Raspberry Pi" 
         }
     ],

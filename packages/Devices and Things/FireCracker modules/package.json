@@ -12,7 +12,7 @@
             "file": "X10_Firecracker_Modules.hgx",
             "name":"X10 Firecracker Modules",
             "description": "FireCracker driver with X10 virtual modules.",
-            "uid": "100510",
+            "uid": "25",
             "group": "Devices and Things" 
         }
     ],

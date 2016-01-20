@@ -12,7 +12,7 @@
             "file": "Eden_Oled_Menu_GPIO.hgx",
             "name":" Eden Board V1 Buttons Menu",
             "description": "Eden Board V1 Options Menu controlled by GPIO buttons",
-            "uid": "100352",
+            "uid": "66",
             "group": "Raspberry Pi" 
         }
     ],
