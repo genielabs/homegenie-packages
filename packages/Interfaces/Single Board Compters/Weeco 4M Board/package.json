@@ -4,7 +4,7 @@
     "title": "Weeco 4M GPIO driver",
     "description": "Adds support for Weeco 4M GPIO",
     "published": "2015-10-16T00:00:00Z",
-    "sourcecode": "https://github.com/genielabs/MIG-WeecoBoard/",
+    "sourcecode": "https://github.com/genielabs/mig-sbc-weecoboard/",
     "homepage": "http://www.micropinguino.it/wordpress/archives/293", 
     "widgets": [ ],
     "programs": [ ],

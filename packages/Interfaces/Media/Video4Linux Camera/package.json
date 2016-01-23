@@ -1,0 +1,18 @@
+{
+    "author": "genielabs",
+    "version": "v1.1",
+    "title": "Video4Linux camera driver",
+    "description": "Interface driver for V4L compatible cameras",
+    "published": "2015-10-16T00:00:00Z",
+    "sourcecode": "https://github.com/genielabs/mig-media-v4lcamera",
+    "homepage": "", 
+    "widgets": [ ],
+    "programs": [ ],
+    "interfaces": [ 
+        { 
+            "file": "MIG-V4LCamera_1_1.zip",
+            "name":"Video4Linux camera driver",
+            "description": "Interface driver for V4L compatible cameras"
+        }
+    ]
+}
