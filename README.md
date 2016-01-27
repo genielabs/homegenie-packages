@@ -56,6 +56,6 @@ The *widgets* array contains a list of *Widgets*' **.zip** archives. The **.zip*
 
 The *programs* array contains a list of *Automation Programs* **.hgx** files. The **.hgx** file can be downladed from the Program Editor page of each program.
 
-The *interfaces* array contains a list of *MIG Interfaces* **.zip** archive. See the **mig-interface-skelton** project page for more informations about how to bundle an interface **.zip** archive.
+The *interfaces* array contains a list of *MIG Interfaces* **.zip** archive. See the <a href="https://github.com/genielabs/mig-interface-skelton" target="_blank">mig-interface-skelton</a> project page for more informations about how to bundle an interface **.zip** archive.
 
 
