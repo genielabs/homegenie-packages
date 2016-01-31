@@ -1,0 +1,20 @@
+{
+    "author": "nolio",
+    "version": "v1.0",
+    "title": "Anti Jamming",
+    "description": "Check zwave network",
+    "published": "2016-01-31T00:00:00Z",
+    "sourcecode": "",
+    "homepage": "http://www.homegenie.it/forum/index.php?topic=1015.0", 
+    "widgets": [ ],
+    "programs": [
+        { 
+            "file": "AntiJamming.hgx",
+            "name":"Anti Jamming",
+            "description": "Check zwave network",
+            "uid": "101003",
+            "group": "Devices and Things" 
+        }
+    ],
+    "interfaces": [ ]
+}

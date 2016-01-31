@@ -166,7 +166,7 @@ When.ModuleParameterChanged( (module, parameter) =&gt;
 Program.GoBackground();</ScriptSource>
   <ScriptErrors>[]</ScriptErrors>
   <Domain>HomeAutomation.HomeGenie.Automation</Domain>
-  <Address>1026</Address>
+  <Address>101002</Address>
   <Name>Alarm - AddOn</Name>
   <Description>Manage the events regardless of the "90-Security" script built in HomeGenie, around  alarm : activated / deactivated / triggered. And doing some severals actions : 
 - Send SMS, 
