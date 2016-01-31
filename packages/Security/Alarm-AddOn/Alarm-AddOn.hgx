@@ -1,0 +1,183 @@
+<?xml version="1.0" encoding="utf-16"?>
+<ProgramBlock xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <ConditionType>OnTrue</ConditionType>
+  <Conditions />
+  <Commands />
+  <ScriptCondition>Program.Setup(()=&gt;{
+    Program.AddInputField("AlarmAddOn.PhoneNumber1", "", "01. Phone number 1");
+    Program.AddInputField("AlarmAddOn.PhoneNumber2", "", "02. Phone number 2");
+    Program.AddInputField("AlarmAddOn.SynologyIP", "", "03. Synology server IP address");
+  	Program.AddInputField("AlarmAddOn.SynologyPort", "", "04. Synology server port number");
+  	Program.AddInputField("AlarmAddOn.SynologyLogin", "", "05. Synology server login");
+  	Program.AddInputField("AlarmAddOn.SynologyPassword", "", "06. Synology server password");
+  	Program.AddInputField("AlarmAddOn.KarotzIP", "", "07. Karotz (under openkarotz) IP address");
+  	Program.AddInputField("AlarmAddOn.KarotzAlertT", "", "08. Karotz (under openkarotz) message tell when trigerred");
+  	Program.AddInputField("AlarmAddOn.KarotzAlertOn", "", "09. Karotz (under openkarotz) message tell when activated");
+  	Program.AddInputField("AlarmAddOn.KarotzAlertOff", "", "10. Karotz (under openkarotz) message tell when deactivated");
+  	Program.AddInputField("AlarmAddOn.ShutterName", "", "11. Shutter name to move");
+  	Program.AddInputField("AlarmAddOn.ShutterLevelOn", "", "12. Shutter level to move");
+});
+return true;</ScriptCondition>
+  <ScriptSource>var tel1 = Program.InputField("AlarmAddOn.PhoneNumber1").Value;
+var tel2 = Program.InputField("AlarmAddOn.PhoneNumber2").Value;
+var SynologyIP = Program.InputField("AlarmAddOn.SynologyIP").Value;
+var SynologyPort = Program.InputField("AlarmAddOn.SynologyPort").Value;
+var SynologyLogin = Program.InputField("AlarmAddOn.SynologyLogin").Value;
+var SynologyPassword = Program.InputField("AlarmAddOn.SynologyPassword").Value;
+var KarotzIP = Program.InputField("AlarmAddOn.KarotzIP").Value;
+var ShutterName = Program.InputField("AlarmAddOn.ShutterName").Value;
+var ShutterLevelOn = Program.InputField("AlarmAddOn.ShutterLevelOn").Value;
+var KarotzAlertT = Program.InputField("AlarmAddOn.KarotzAlertT").Value;
+var KarotzAlertOn = Program.InputField("AlarmAddOn.KarotzAlertOn").Value;
+var KarotzAlertOff = Program.InputField("AlarmAddOn.KarotzAlertOff").Value;
+double Val;
+
+Action&lt;string,string&gt; 
+sendsms = (string tel, string text) =&gt; {
+      var proc = new System.Diagnostics.Process {
+          StartInfo = new System.Diagnostics.ProcessStartInfo {
+              FileName = "/bin/bash",
+              //Arguments = "-c \"echo '"+text+"' | /usr/bin/gammu --sendsms TEXT "+tel+"\"",
+              Arguments = "-c \"echo '"+text+"' | gammu-smsd-inject TEXT "+tel+"\"",            	
+              UseShellExecute = false,
+              RedirectStandardOutput = true,
+              CreateNoWindow = true
+          }
+      };
+      proc.Start();
+      while (!proc.StandardOutput.EndOfStream) {
+          string line = proc.StandardOutput.ReadLine();
+          Program.Notify("SHELL COMMAND", line);
+      }
+};
+
+var alarmTriggeredLogicC = new Func&lt;bool&gt;(()=&gt;{
+    Program.RunAsyncTask(()=&gt;
+	{
+  	////////////////////// Send SMS //////////////////////
+    if(tel1 != ""){sendsms(tel1,"// Alarm "+DateTime.Now+" // "+Program.WithName("Security Alarm System").Parameter("HomeGenie.SecurityTriggerSource").Value+" //");}
+    if(tel2 != ""){sendsms(tel2,"// Alarm "+DateTime.Now+" // "+Program.WithName("Security Alarm System").Parameter("HomeGenie.SecurityTriggerSource").Value+" //");}
+    //////////// Alert on karotz
+	if(KarotzIP != ""){Net.WebService("http://"+KarotzIP+"/cgi-bin/tts?voice=alice&amp;text='"+KarotzAlertT+"'&amp;nocache=0").Call();}
+    });
+  	return true;
+});
+
+var alarmonnnn = new Func&lt;bool&gt;(()=&gt;{
+    Program.RunAsyncTask(()=&gt;
+	{
+    ////////////////////// Move shutter //////////////////////
+    if(ShutterName!=""&amp;&amp;ShutterLevelOn!=""){
+      if (Modules.WithName(ShutterName).Get().Parameter("Status.Level").DecimalValue &lt;= Convert.ToDouble(ShutterLevelOn)/100 ) {
+        Val = Modules.WithName(ShutterName).Get().Parameter("Status.Level").DecimalValue + Convert.ToDouble(ShutterLevelOn)/100;
+      } else {
+      	if (Modules.WithName(ShutterName).Get().Parameter("Status.Level").DecimalValue &lt;= (100-Convert.ToDouble(ShutterLevelOn))/100 &amp;&amp; Modules.WithName(ShutterName).Get().Parameter("Status.Level").DecimalValue &lt;= 50 ){
+        	Val = Modules.WithName(ShutterName).Get().Parameter("Status.Level").DecimalValue + Convert.ToDouble(ShutterLevelOn)/100;
+      	} else {
+        	Val = Modules.WithName(ShutterName).Get().Parameter("Status.Level").DecimalValue - Convert.ToDouble(ShutterLevelOn)/100;
+      	}
+      }
+      Modules.WithName(""+ShutterName+"").Command("Control.Level").Set(""+Val*100);
+    }
+    ////////////////////// WebCam activation of synology surveillance video  //////////////////////
+    if(SynologyIP != "" &amp;&amp; SynologyPort != "" &amp;&amp; SynologyLogin != "" &amp;&amp; SynologyPassword != ""){
+      try
+      {
+        var authensyno = Net.WebService("http://"+SynologyIP+":"+SynologyPort+"/webapi/auth.cgi?api=SYNO.API.Auth&amp;method=Login&amp;version=2&amp;account="+SynologyLogin+"&amp;passwd="+SynologyPassword+"&amp;session=SurveillanceStation&amp;format=cookie").GetData();
+        //Net.WebService("http://"+SynologyIP+":"+SynologyPort+"/webapi/SurveillanceStation/camera.cgi?api=SYNO.SurveillanceStation.Camera&amp;method=Enable&amp;version=3&amp;cameraIds=1&amp;_sid="+authensyno.data.sid).GetData();
+        Net.WebService("http://"+SynologyIP+":"+SynologyPort+"/webapi/_______________________________________________________entry.cgi?api=SYNO.SurveillanceStation.Camera&amp;method=Enable&amp;version=3&amp;cameraIds=1&amp;_sid="+authensyno.data.sid).GetData();
+      }
+      catch (Exception e) 
+      {
+          Program.Notify("error", e.Message);
+      }
+   }
+    ////////////////////// Send SMS //////////////////////
+    if(tel1 != ""){sendsms(tel1,"// Alarm On : "+DateTime.Now+" //");}
+    if(tel2 != ""){sendsms(tel2,"// Alarm On : "+DateTime.Now+" //");}
+    ////////////////////// Alert on openkarotz //////////////////////
+    if(KarotzIP!=""){Net.WebService("http://"+KarotzIP+"/cgi-bin/tts?voice=alice&amp;text='"+KarotzAlertOn+"'&amp;nocache=0").Call();}
+    ////////////////////// Switch off the light //////////////////////
+    Modules.OfDeviceType("Light").Off();
+    ////////////////////// Pause de squeezebox  //////////////////////
+      if(SynologyIP != ""){Net.WebService("http://"+SynologyIP+":9002/status.html?p0=pause&amp;p1=1").Call();}
+      });
+  	return true;
+});
+
+var alarmoffff = new Func&lt;bool&gt;(()=&gt;{
+    Program.RunAsyncTask(()=&gt;
+	{
+    ////////////////////// Move shutter //////////////////////    
+    if(ShutterName!=""&amp;&amp;ShutterLevelOn!=""){
+      if (Modules.WithName(ShutterName).Get().Parameter("Status.Level").DecimalValue &lt;= Convert.ToDouble(ShutterLevelOn)/100 ) {
+        Val = Modules.WithName(ShutterName).Get().Parameter("Status.Level").DecimalValue + Convert.ToDouble(ShutterLevelOn)/100;
+      } else {
+      	if (Modules.WithName(ShutterName).Get().Parameter("Status.Level").DecimalValue &lt;= (100-Convert.ToDouble(ShutterLevelOn))/100  &amp;&amp; Modules.WithName(ShutterName).Get().Parameter("Status.Level").DecimalValue &lt;= 50) {
+        	Val = Modules.WithName(ShutterName).Get().Parameter("Status.Level").DecimalValue + Convert.ToDouble(ShutterLevelOn)/100;
+      	} else {
+        	Val = Modules.WithName(ShutterName).Get().Parameter("Status.Level").DecimalValue - Convert.ToDouble(ShutterLevelOn)/100;
+      	}
+      }
+      Modules.WithName(""+ShutterName+"").Command("Control.Level").Set(""+Val*100);
+    }
+    ////////////////////// WebCam deactivation in synology surveillance video  //////////////////////
+    if(SynologyIP != "" &amp;&amp; SynologyPort != "" &amp;&amp; SynologyLogin != "" &amp;&amp; SynologyPassword != ""){
+	  try
+      {
+        var authensyno = Net.WebService("http://"+SynologyIP+":"+SynologyPort+"/webapi/auth.cgi?api=SYNO.API.Auth&amp;method=Login&amp;version=2&amp;account="+SynologyLogin+"&amp;passwd="+SynologyPassword+"&amp;session=SurveillanceStation&amp;format=cookie").GetData();
+        //Net.WebService("http://"+SynologyIP+":"+SynologyPort+"/webapi/SurveillanceStation/camera.cgi?api=SYNO.SurveillanceStation.Camera&amp;method=Disable&amp;version=3&amp;cameraIds=1&amp;_sid="+authensyno.data.sid).GetData();
+        Net.WebService("http://"+SynologyIP+":"+SynologyPort+"/webapi/_______________________________________________________entry.cgi?api=SYNO.SurveillanceStation.Camera&amp;method=Disable&amp;version=3&amp;cameraIds=1&amp;_sid="+authensyno.data.sid).GetData();
+      }
+      catch (Exception e) 
+      {
+          Program.Notify("error", e.Message);
+      }
+    }
+    ////////////////////// Send SMS //////////////////////
+    if(tel1 != ""){sendsms(tel1,"// Alarm Off : "+DateTime.Now+" //");}
+    if(tel2 != ""){sendsms(tel2,"// Alarm Off : "+DateTime.Now+" //");}
+    ////////////////////// Alert on openkarotz //////////////////////
+    if(KarotzIP != ""){Net.WebService("http://"+KarotzIP+"/cgi-bin/tts?voice=alice&amp;text='"+KarotzAlertOff+"'&amp;nocache=0").Call();}
+    });
+    return true;
+});
+
+When.ModuleParameterChanged( (module, parameter) =&gt;
+//When.ModuleParameterIsChanging((module, parameter) =&gt; 
+{
+    if (module.Is("Security Alarm System") &amp;&amp; parameter.Is("HomeGenie.SecurityTriggered") &amp;&amp; parameter.Value == "1")
+    {
+        alarmTriggeredLogicC();
+        return false;
+    }
+    if (module.Is("Security Alarm System") &amp;&amp; parameter.Is("Status.Level") &amp;&amp; parameter.Value == "1")
+    {
+        alarmonnnn();
+        return false;
+    }
+    if (module.Is("Security Alarm System") &amp;&amp; parameter.Is("Status.Level") &amp;&amp; parameter.Value == "0") //&amp;&amp; parameter.Statistics.Last.Value == 1
+    {
+        alarmoffff();
+        return false;
+    }
+    return true;
+});
+Program.GoBackground();</ScriptSource>
+  <ScriptErrors>[]</ScriptErrors>
+  <Domain>HomeAutomation.HomeGenie.Automation</Domain>
+  <Address>101002</Address>
+  <Name>Alarm - AddOn</Name>
+  <Description>Manage the events regardless of the "90-Security" script built in HomeGenie, around  alarm : activated / deactivated / triggered. And doing some severals actions : 
+- Send SMS, 
+- Alert on the karotz (under openkarotz)
+- Switch off the light
+- Move the shutter
+- Activate the webcam detection on "Synology Surveillance Station"</Description>
+  <Group>MyScripts</Group>
+  <Features />
+  <ActivationTime>2016-01-30T17:37:56.473795Z</ActivationTime>
+  <TriggerTime>2016-01-30T17:37:56.923224Z</TriggerTime>
+  <Type>CSharp</Type>
+  <IsEnabled>true</IsEnabled>
+</ProgramBlock>

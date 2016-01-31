@@ -1,0 +1,20 @@
+{
+    "author": "nolio",
+    "version": "v1.0",
+    "title": "Evol Smart Light",
+    "description": "Evolution Of builtin SmartLight Script",
+    "published": "2016-01-31T00:00:00Z",
+    "sourcecode": "",
+    "homepage": "http://www.homegenie.it/forum/index.php?topic=845.0", 
+    "widgets": [ ],
+    "programs": [
+        { 
+            "file": "EvolSmartLight.hgx",
+            "name":"Evol Smart Light",
+            "description": "Evolution Of builtin SmartLight Script",
+            "uid": "101001",
+            "group": "Smart-Control" 
+        }
+    ],
+    "interfaces": [ ]
+}
