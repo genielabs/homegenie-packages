@@ -111,7 +111,7 @@ while (Program.IsEnabled )
 Program.GoBackground();</ScriptSource>
   <ScriptErrors>[]</ScriptErrors>
   <Domain>HomeAutomation.HomeGenie.Automation</Domain>
-  <Address>1021</Address>
+  <Address>101003</Address>
   <Name>AntiJamming</Name>
   <Description />
   <Group>MyScripts</Group>
