@@ -182,7 +182,7 @@ while (Program.IsEnabled)
 }</ScriptSource>
   <ScriptErrors>[]</ScriptErrors>
   <Domain>HomeAutomation.HomeGenie.Automation</Domain>
-  <Address>1037</Address>
+  <Address>101001</Address>
   <Name>My Smart Lights</Name>
   <Description>Control device by motion detection and enviroment light. </Description>
   <Group>MyScripts</Group>
