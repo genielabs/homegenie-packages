@@ -12,7 +12,7 @@
             "file": "AntiJamming.hgx",
             "name":"Anti Jamming",
             "description": "Check zwave network",
-            "uid": "101001",
+            "uid": "101003",
             "group": "Devices and Things" 
         }
     ],
