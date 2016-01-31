@@ -9,7 +9,7 @@
     "widgets": [ ],
     "programs": [
         { 
-            "file": "wemo.hgx",
+            "file": "Alarm-AddOn.hgx",
             "name":"Alarm Add On",
             "description": "Add severals feature link ton arm/disarm",
             "uid": "101002",
