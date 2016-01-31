@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="utf-16"?>
+<ProgramBlock xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <ConditionType>OnTrue</ConditionType>
+  <Conditions />
+  <Commands />
+  <ScriptCondition>Program.Setup( () =&gt; {
+  	Program.AddInputField("AntiJamming.tel1", "", "1. 1st phone number");
+	Program.AddInputField("AntiJamming.Capteur1", "", "2. Nom du capteur 1 ? tester");
+	Program.AddInputField("AntiJamming.Capteur2", "", "3. Nom du capteur 2 ? tester");
+  
+  	Program.AddVirtualModule("HomeAutomation.AntiJamming", "1", "Switch", "homegenie/generic/switch");
+});
+return true;
+</ScriptCondition>
+  <ScriptSource>var tel1 = Program.InputField("AntiJamming.tel1").Value;
+var capteur = Program.InputField("AntiJamming.Capteur1").Value;
+var capteur2 = Program.InputField("AntiJamming.Capteur2").Value;
+var messagetext = "Jamming : Perte des capteurs : " + capteur + " et " + capteur2 ;
+var module = Modules.WithName(capteur).Get();
+var module2 = Modules.WithName(capteur2).Get();
+var parameter = module.Parameter("Status.Level");
+var parameter2 = module2.Parameter("Status.Level");
+var idleTime = parameter.IdleTime; // the parameter is not being update since "idleTime" milliseconds
+var idleTime2 = parameter2.IdleTime; // the parameter is not being update since "idleTime" milliseconds
+var countt=0;
+var countt2=0;
+var pb=0;
+Action&lt;string,string&gt; 
+sendsms = (string tel, string text) =&gt; {
+      var proc = new System.Diagnostics.Process {
+          StartInfo = new System.Diagnostics.ProcessStartInfo {
+              FileName = "/bin/bash",
+              // Arguments = "-c \"echo '"+text+"' | /usr/bin/gammu --sendsms TEXT "+tel+"\"",
+			  Arguments = "-c \"echo '"+text+"' | gammu-smsd-inject TEXT "+tel+"\"",            	
+              UseShellExecute = false,
+              RedirectStandardOutput = true,
+              CreateNoWindow = true
+          }
+      };
+      proc.Start();
+      while (!proc.StandardOutput.EndOfStream) {
+          string line = proc.StandardOutput.ReadLine();
+          Program.Notify("SHELL COMMAND", line);
+      }
+};
+
+When.WebServiceCallReceived("HomeAutomation.AntiJamming", (args) =&gt; {
+    string[] reqs = ((string)args).Split('/');
+  	string responseString = ""; 
+    try
+    {
+    string switchnumber = reqs[1];
+    string command = reqs[2];
+      
+    var virtualMod = Modules.InDomain("HomeAutomation.AntiJamming").WithAddress(switchnumber).Get();
+      
+    switch(command)
+    {
+      case "Control.On":
+      Program.RaiseEvent(virtualMod,"Status.Level","100","AntiJamming");
+      break;
+      case "Control.Off":
+      Program.RaiseEvent(virtualMod,"Status.Level","0","AntiJamming");
+      break;
+    }
+	} catch (Exception e) {
+    	Program.Notify("HomeAutomation.AntiJamming ERROR!", e.Message);
+    }
+    if (responseString == "") {
+      return "{ 'ResponseValue' : 'OK' }";
+    } else  {
+      return responseString ;
+    }  
+});
+
+while (Program.IsEnabled )
+{ 
+  if ( Modules.InDomain("HomeAutomation.AntiJamming").WithAddress("1").Get().Parameter("Status.Level").Value == "100") {
+    parameter.RequestUpdate(); // this will store current parameter timestamp
+  	if (parameter.WaitUpdate(60)) // will check against previously stored timestamp
+  	{
+   		// ok value was updated in the meantime
+     	var freshValue = parameter.Value;
+      	countt=0;
+		if (tel1!="" &amp;&amp; pb == 1) {sendsms(tel1, "Jamming : Retour ? la normale");pb=0;}
+  	}
+  	else
+  	{
+    	 // parameter was not updated in the last 60 seconds
+    	countt=countt+1;
+  	}
+    parameter2.RequestUpdate(); // this will store current parameter timestamp
+    if (parameter2.WaitUpdate(60)) // will check against previously stored timestamp
+    {
+      // ok value was updated in the meantime
+      var freshValue2 = parameter2.Value;
+      countt2=0;
+      if (tel1!="" &amp;&amp; pb == 1) {sendsms(tel1, "Jamming : Retour ? la normale");pb=0;}
+    }
+    else
+    {
+      // parameter was not updated in the last 60 seconds
+      countt2=countt2+1;
+    }
+  	if (tel1!="" &amp;&amp; countt == 3 &amp;&amp; countt2 == 3) {sendsms(tel1, messagetext+" ("+countt+"/"+countt2+")");pb=1;}
+	}
+  else {
+    	Pause(5*60);
+  }
+}
+Program.GoBackground();</ScriptSource>
+  <ScriptErrors>[]</ScriptErrors>
+  <Domain>HomeAutomation.HomeGenie.Automation</Domain>
+  <Address>1021</Address>
+  <Name>AntiJamming</Name>
+  <Description />
+  <Group>MyScripts</Group>
+  <Features />
+  <ActivationTime>2015-09-10T22:59:30.526846Z</ActivationTime>
+  <TriggerTime>2015-09-10T22:59:30.78579Z</TriggerTime>
+  <Type>CSharp</Type>
+  <IsEnabled>true</IsEnabled>
+</ProgramBlock>
