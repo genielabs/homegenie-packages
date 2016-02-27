@@ -59,6 +59,7 @@ for (int p = 0; p &lt; pinMapping.Count; p++)
   if (pc.Direction == PinDirection.Input)
   {
     configuration[p] = new InputPinConfiguration(PinMapping.ToProcessor(pc.Pin));
+    ((InputPinConfiguration)configuration[p]).Reversed = pc.Reversed;
     if (pc.Config.EndsWith("+"))
     {
       ((InputPinConfiguration)configuration[p]).Resistor = PinResistor.PullUp;
