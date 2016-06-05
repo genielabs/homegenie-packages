@@ -1,0 +1,18 @@
+{
+    "author": "swaner",
+    "version": "v0.9",
+    "title": "Harmony hub driver",
+    "description": "Adds support for Harmony Hub",
+    "published": "2016-06-05T00:00:00Z",
+    "sourcecode": "https://github.com/swaner/HomeGenieHarmonyInterface",
+    "homepage": "http://www.homegenie.it/forum/index.php?topic=1535.0", 
+    "widgets": [ ],
+    "programs": [ ],
+    "interfaces": [ 
+        { 
+            "file": "mig_interface_harmony.zip",
+            "name":"MIG-Harmony",
+            "description": "MIG Harmony driver"
+        }
+    ]
+}
