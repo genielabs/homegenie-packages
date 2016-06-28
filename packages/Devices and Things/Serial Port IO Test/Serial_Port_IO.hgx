@@ -4,7 +4,7 @@
   <Conditions />
   <Commands />
   <ScriptCondition />
-  <ScriptSource>var portname = "/dev/ttyUSB0";
+  <ScriptSource>var portname = "/dev/ttyUSB0"; // COMx can be used on windows computers, where x is the Port Number (Find in device manager)
 
 Action&lt;string&gt; 
 HandleStringReceived = (string message) =&gt; {
@@ -36,8 +36,10 @@ SerialPort
   .OnStatusChanged( HandleStatusChanged )
   .OnMessageReceived( HandleMessageReceived )
   .OnStringReceived( HandleStringReceived )
-  .Connect( 9600 ); // change baud rate if needed
-
+  .Connect( 9600 ); // change baud rate if needed, (this uses default Parity of None, and 1 Stop Bit)
+  // or change baud and stopbits
+  // .Connect( 19200, System.IO.Ports.StopBits.Two, System.IO.Ports.Parity.None ); // Stop Bits or Parity can be optionally specified.
+  
 while (Program.IsEnabled)
 {
   // send a raw byte message
