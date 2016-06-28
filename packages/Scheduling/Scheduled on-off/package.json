@@ -1,0 +1,20 @@
+{
+    "author": "genielabs",
+    "version": "v1.0",
+    "title": "Scheduled ON/OFF",
+    "description": "Turn on/off a device using HG scheduler.",
+    "published": "2015-02-12T00:00:00Z",
+    "sourcecode": "",
+    "homepage": "", 
+    "widgets": [ ],
+    "programs": [
+        { 
+            "file": "Scheduled_ON_OFF.hgx",
+            "name":"Scheduled ON/OFF",
+            "description": "Turn on/off a device using HG scheduler.",
+            "uid": "35",
+            "group": "Scheduling" 
+        }
+    ],
+    "interfaces": [ ]
+}

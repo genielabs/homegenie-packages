@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ProgramBlock xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <ConditionType>OnTrue</ConditionType>
+  <Conditions/>
+  <Commands/>
+  <ScriptCondition>Program
+  .AddFeature("", "Switch,Light,Dimmer", "HomeGenie.TurnOffDelay", "Automatic turn off delay (seconds)", "slider:0:3600:1")
+  .Run();
+</ScriptCondition>
+  <ScriptSource>When.ModuleParameterIsChanging((module, parameter) =&gt; {
+  // check if the module raising the event has the Turn Off Delay set
+  if (module.HasFeature("HomeGenie.TurnOffDelay") &amp;&amp; module.Parameter("HomeGenie.TurnOffDelay").DecimalValue &gt; 0)
+  {
+    // Check if the module has just been turned on
+    if (parameter.Is("Status.Level") &amp;&amp; parameter.Statistics.Last.Value == 0 &amp;&amp; parameter.DecimalValue &gt; 0)
+    {
+      // Run a background timer that will turn off the light
+      var pausedelay = module.Parameter("HomeGenie.TurnOffDelay").DecimalValue;
+      Program.RunAsyncTask(()=&gt;{
+        Pause(pausedelay);
+        // Check if the light is still on, also module.IsOn could be used
+        if (parameter.DecimalValue &gt; 0)
+        {
+          module.Off();
+          Program.Notify(
+            "Turn Off Delay",
+            module.Instance.Name + "&lt;br&gt;" + 
+            module.Instance.Address + 
+            " switched off.");
+        }
+      });
+    }
+  }
+  return true;
+});
+// the program will be running in the background waiting for events
+Program.GoBackground();</ScriptSource>
+  <ScriptErrors>[]</ScriptErrors>
+  <Domain>HomeAutomation.HomeGenie.Automation</Domain>
+  <Address>112</Address>
+  <Name>Turn Off Delay</Name>
+  <Description>When device is turned on, automatically turn it off after a given delay.</Description>
+  <Group>Energy Management</Group>
+  <Features>
+    <ProgramFeature>
+      <FieldType>slider:0:3600:1</FieldType>
+      <ForDomains/>
+      <ForTypes>Switch,Light,Dimmer</ForTypes>
+      <Property>HomeGenie.TurnOffDelay</Property>
+      <Description>Automatic turn off delay (seconds)</Description>
+    </ProgramFeature>
+  </Features>
+  <ActivationTime xsi:nil="true"/>
+  <TriggerTime>2016-06-22T00:25:46.557416Z</TriggerTime>
+  <Type>CSharp</Type>
+  <IsEnabled>true</IsEnabled>
+</ProgramBlock>

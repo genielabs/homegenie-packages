@@ -1,0 +1,26 @@
+{
+    "author": "Jan (jkUtils)",
+    "version": "v1.0",
+    "title": "jkUtils - Solar Altitude",
+    "description": "Calculates schedulers for sunrise/sunset with civil, nautical, astronomical timings.",
+    "published": "2015-12-02T00:00:00Z",
+    "sourcecode": "",
+    "homepage": "http://www.homegenie.it/forum/index.php?topic=194", 
+    "widgets": [
+        { 
+            "file": "jkUtils_SolarAltitude_SolarAltitude.zip",
+            "name":"Solar Altitude Widget",
+            "description": "Solar Altitude Widget"
+        }
+    ],
+    "programs": [
+        { 
+            "file": "jkUtils_Solar_Altitude.hgx",
+            "name":"jkUtils - Solar Altitude",
+            "description": "Widget for scheduling thermostats, lights and shutters.",
+            "uid": "501",
+            "group": "Weather and Environment" 
+        }
+    ],
+    "interfaces": [ ]
+}

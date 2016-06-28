@@ -1,0 +1,20 @@
+{
+    "author": "genielabs",
+    "version": "v1.0",
+    "title": "Turn Off Delay",
+    "description": "When device is turned on, automatically turn it off after a given delay.",
+    "published": "2015-02-12T00:00:00Z",
+    "sourcecode": "",
+    "homepage": "", 
+    "widgets": [ ],
+    "programs": [
+        { 
+            "file": "Turn_Off_Delay.hgx",
+            "name":"Turn Off Delay",
+            "description": "When device is turned on, automatically turn it off after a given delay.",
+            "uid": "112",
+            "group": "Energy Management" 
+        }
+    ],
+    "interfaces": [ ]
+}

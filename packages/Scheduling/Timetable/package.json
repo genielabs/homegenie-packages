@@ -1,0 +1,26 @@
+{
+    "author": "genielabs",
+    "version": "v1.0",
+    "title": "Timetable Widget",
+    "description": "Widget for scheduling thermostats, lights and shutters.",
+    "published": "2014-02-06T00:00:00Z",
+    "sourcecode": "",
+    "homepage": "", 
+    "widgets": [
+        { 
+            "file": "homegenie_generic_timetable.zip",
+            "name":"Timetable Widget",
+            "description": "Widget for scheduling thermostats, lights and shutters."
+        }
+    ],
+    "programs": [
+        { 
+            "file": "Timetable.hgx",
+            "name":"Timetable",
+            "description": "Widget for scheduling thermostats, lights and shutters.",
+            "uid": "36",
+            "group": "Scheduling" 
+        }
+    ],
+    "interfaces": [ ]
+}

@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-16"?>
+<ProgramBlock xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <ConditionType>OnTrue</ConditionType>
+  <Conditions />
+  <Commands />
+  <ScriptCondition>Program.AddFeature("", "Light,Dimmer,Switch,Shutter", "HomeGenie.ScheduleControl", "Control device on a given schedule", "checkbox");
+Program.AddFeature("", "Light,Dimmer,Switch,Shutter", "HomeGenie.ScheduleOn", "Turn On", "cron.text");
+Program.AddFeature("", "Light,Dimmer,Switch,Shutter", "HomeGenie.ScheduleOff", "Turn Off", "cron.text");
+Program.Run();
+</ScriptCondition>
+  <ScriptSource>var controlModules = Modules.WithFeature("HomeGenie.ScheduleControl");
+
+while (Program.IsEnabled)
+{
+
+  controlModules.Each((module)=&gt;{
+
+    var scheduleOn = module.Parameter("HomeGenie.ScheduleOn").Value;
+    var scheduleOff = module.Parameter("HomeGenie.ScheduleOff").Value;
+
+    if (Scheduler.IsScheduling(scheduleOn))
+    {
+      Program.Notify("Scheduled Control", module.Instance.Name + " ON");
+      module.On();
+    }
+
+    if (Scheduler.IsScheduling(scheduleOff))
+    {
+      Program.Notify("Scheduled Control", module.Instance.Name + " OFF");
+      module.Off();
+    }
+
+    return false;
+  });
+
+  var pause = (60 - DateTime.Now.Second);
+  Pause(pause);
+
+}</ScriptSource>
+  <ScriptErrors>[]</ScriptErrors>
+  <Domain>HomeAutomation.HomeGenie.Automation</Domain>
+  <Address>35</Address>
+  <Name>Scheduled ON/OFF</Name>
+  <Description>Turn on/off a device using HG scheduler.</Description>
+  <Group>Scheduling</Group>
+  <Features />
+  <ActivationTime xsi:nil="true" />
+  <TriggerTime xsi:nil="true" />
+  <Type>CSharp</Type>
+  <IsEnabled>false</IsEnabled>
+</ProgramBlock>
