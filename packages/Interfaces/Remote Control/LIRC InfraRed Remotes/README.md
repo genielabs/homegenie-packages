@@ -8,7 +8,7 @@ LIRC package must be installed and configured for this driver to work.
 
 ### 1. Install and configure LIRC
 
-    sudo apt-get install lirc
+    sudo apt-get install lirc liblircclient-dev
 
 To enable InfraRed remote control edit the /etc/lirc/hardware.conf file:
 
