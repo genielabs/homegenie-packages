@@ -3,7 +3,7 @@
     "version": "v1.1",
     "title": "LIRC InfraRed Remotes",
     "description": "InfraRed I/O based on LIRC",
-    "published": "2015-10-16T00:00:00Z",
+    "published": "2016-07-07T00:00:00Z",
     "sourcecode": "https://github.com/genielabs/mig-controllers-lircremote",
     "homepage": "", 
     "widgets": [ ],
