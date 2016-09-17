@@ -1,0 +1,882 @@
+<?xml version="1.0" encoding="utf-16"?>
+<ProgramBlock xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <ConditionType>OnTrue</ConditionType>
+  <Conditions />
+  <Commands />
+  <ScriptCondition>//----------------------------------------------------------
+// Main setup only runs once
+//----------------------------------------------------------
+const string MODULES_DOMAIN = "Rfm";
+string logDir = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "log");  
+
+Program.Setup(()=&gt; {
+  
+  Program.UseWidget("rfm/arduino/switch"); 
+
+  
+  // Features
+  Program.AddFeature(MODULES_DOMAIN, "Switch", "Rfm.CentralOff", "Switch all devices off when HG stops", "checkbox");
+  Program.AddFeature(MODULES_DOMAIN, "Switch", "Rfm.Simulate", "Simulate only", "checkbox");
+        
+  //----------------------------------------------------------
+  // Add optional global program parameters
+  // unique for all defined virtual modules
+  //----------------------------------------------------------
+  Program.AddOption("Rfm.NetId", "7", "Network ID for all remote devices", "slider:1:254:1");
+  Program.AddOption("Rfm.Port", "/dev/ttyUSB0", "Serial port (/dev/ttyUSB0)", "text");
+  Program.AddOption("Rfm.Baudrate", "19200", "Serial baud rate (19200)", "text");
+  Program.AddOption("Rfm.Interval", "5", "Serial interval (5 seconds)", "slider:1:20:1");
+  Program.AddOption("Rfm.UseQueue", "True", "Use command queue (True)", "text");
+  Program.AddOption("Rfm.QueueSize", "5", "Commands in queue (5)", "slider:1:20:1");
+  Program.AddOption("Rfm.VirtualModulesCount", "5", "Number of virtual modules (5)", "slider:1:50:1");
+  Program.AddOption("Rfm.UseLog", "On", "Use debug logging", "checkbox");
+  Program.AddOption("Rfm.LogPath", System.IO.Path.Combine(logDir,"RfmSwitch.log"), "Path to log file", "text");
+});
+
+// Startup program automatically with start of Homegenie service
+Program.Run();</ScriptCondition>
+  <ScriptSource>bool IsDemo = true;
+bool useJsonMessage = true;
+
+//===========================================================================================================================================================================
+//	A command package could be send to any kind of Arduino boards using a collecting command queue.
+//    Currently supported boards: Moteino, MoteinoMEGA, could be easily adapted to further board types
+//    (edit boards array)
+//
+// IMPORTANT! A moduleDomain must begin with 'HomeAutomation.' and your demands
+//===========================================================================================================================================================================
+const string MODULES_DOMAIN = "Rfm";
+const string MODULES_WIDGET = "rfm/arduino/switch";
+const string EVENT_DESCRIPTION = "RFM Module";
+const char DELIMITER_CHAR = '/';
+const string ICONPATH = "html/pages/control/widgets/homegenie/generic/images/icons";
+
+var RFM_MODULES = Modules.InDomain(MODULES_DOMAIN).OfDeviceType("Switch");
+
+string ActivityLogPath = Program.Option("Rfm.LogPath").Value;
+bool UseLogging = (Program.Option("Rfm.UseLog").Value.ToUpper() == "ON");
+
+// 2015-10-21 - Added to allow the widget to display the date/time.
+string last_updated; 
+// 2016-08-29 - Added to have a one time call for multiple using
+var ipserver = System.Net.Dns.GetHostEntry(System.Net.Dns.GetHostName()).AddressList.FirstOrDefault(ip =&gt; ip.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork); 
+
+var cmdQueue = new Queue&lt;System.Dynamic.ExpandoObject&gt;();
+int queueSize = (int)Program.Option("Rfm.QueueSize").DecimalValue;
+int updateRate = (int)Program.Option("Rfm.Interval").DecimalValue;
+bool IsSerialConnected = false;
+
+//===========================================================================================================================================================================
+//
+// Arduino like embedded board pins with there board specific names and the allowed commands to handle the board pin
+// there is no feature up to now to dedicate INPUT and OUTPUT or ANALOG port settings via this array. So keep attention what your are doing
+//
+//===========================================================================================================================================================================
+
+var boards = new[] { 
+  new { 
+    name = "MOTEINO", 		
+    pins = new[] { 	"A0","A1","A2","A3","A4","A5","A6", "A7", "D0","D1","D2","D3","D4","D5","D6","D7","D8","D9","D10","D11","D12","D13","D14","D15","D16","D17","D18","D19",
+    				"PB0","PB1","PB2","PB3","PB4","PB5","PC0","PC1","PC2","PC3","PC4","PC5", "PD0","PD1","PD2","PD3","PD4","PD5","PD6", "PD7" },
+    cmd = new[]  {  "ON","OFF","TEST","GET"}},
+  new { 
+    name = "MOTEINOMEGA", 	
+    pins = new[] {	"A0","A1","A2","A3","A4","A5","A6", "A7", "D0","D1","D2","D3","D4","D5","D6","D7","D8","D9","D10","D11","D12","D13","D14","D15","D16","D17","D18","D19",
+                    "D20","D21","D22","D23","D24","D25","D26","D27","D28","D29","D30","D31","PA0","PA1","PA2","PA3","PA4","PA5","PA6","PA7","PB0","PB1","PB2","PB3","PB4",
+                    "PB5","PB6","PB7","PC0","PC1","PC2","PC3","PC4","PC5","PC6","PC7","PD0","PD1","PD2","PD3","PD4","PD5","PD6" },
+    cmd = new[]  {  "ON","OFF","TEST","GET"}}
+	};
+ 
+//===========================================================================================================================================================================
+//
+// Allowed RfmSwitch commands to use these commands directly by creating an URI call. If you use an invalid command this is the help response output 
+//
+//===========================================================================================================================================================================
+
+var validWebCommands = new[] {
+  	new { command = "Control.On", example = ipserver + "/api/Rfm/5/Control.On", description = "switch module 5 on"},
+  	new { command = "Control.Off", example = ipserver + "/api/Rfm/5/Control.Off", description = "switch module 5 off"},
+  	new { command = "Control.Enable", example = ipserver + "/api/Rfm/5/Control.Enable", description = "enable module 5 to be switched on or off"},
+  	new { command = "Control.Disable", example = ipserver +"/api/Rfm/5/Control.Disable", description = "disable module 5 and switch it off, no switch on possible"},
+  	new { command = "Control.Status", example = ipserver +"/api/Rfm/5/Control.Status", description = "Get level, duration and enable status"}, 
+  	new { command = "Control.Parameter", example = ipserver +"/api/Rfm/5/Control.Parameter", description = "get name, board, port, duration, on/off icons and enabled status"}, 
+  	new { command = "Controls.Enable", example = ipserver + "/api/Rfm/5/Controls.Enable", description = "set ALL wizard driven module to enabled"},
+    new { command = "Controls.Disable", example = ipserver + "/api/Rfm/5/Controls.Disable", description = "set ALL wizard driven module to disabled and switch them off"},
+    new { command = "Controls.Stop", example = ipserver + "/api/Rfm/5/Controls.Stop", description = "switch off all 'still active'' moduls"},
+    new { command = "Program.GetIcons", example = ipserver + "api/Rfm/4/Program.GetIcons/'\"pages/control/widgets/rfm/images/\"", description = "get a list of all stored icons in path ..."},
+    new { command = "Program.Parameter", example = ipserver + "/api/Rfm/0/Program.Parameter", description = "get domain, serial port, baud rate, interval ... from program"},  
+    new { command = "Program.GetBoardPins", example = ipserver + "/api/Rfm/0/Program.GetBoardPins", description = "return a list of all possible board pins"}, 
+    new { command = "Rfm.IconOn", example = ipserver + "/api/Rfm/1/Rfm.IconOn/'pages/control/widgets/homegenie/generic/images/icons/on_icon.png'", description = "set the module wizard 'on icon image'"},
+    new { command = "Rfm.IconOff", example = ipserver + "/api/Rfm/1/Rfm.IconOn/'pages/control/widgets/homegenie/generic/images/icons/off_icon.png'", description = "set the module wizard 'off icon image'"},
+    new { command = "Rfm.Boardtype", example = ipserver + "/api/Rfm/1/Rfm.Boardtype/MOTEINO", description = "set the dedicated board type of a module"},
+    new { command = "Rfm.Duration", example = ipserver + "/api/Rfm/1/Rfm.Duration/15", description = "set the switch on duration"},
+    new { command = "Rfm.Node", example = ipserver + "/api/Rfm/1/Rfm.Node/87", description = "set the module node"},
+    new { command = "Rfm.Port", example = ipserver + "/api/Rfm/1/Rfm.Port/A3", description = "set the module port"},
+    new { command = "On", example = ipserver + "/api/Rfm/0/On/86/A5/35", description = "switch on a free selected node without a existing module"},
+    new { command = "Off", example = ipserver + "/api/Rfm/0/Off/86/A5", description = "switch on a free selected node without a existing module"}
+  };
+
+//
+// Log to special output path
+//
+
+Action&lt;string&gt; Log = (string logtext) =&gt; { 
+  if (UseLogging)
+    {
+    	try{
+          	string text = System.DateTime.Now.ToLocalTime().ToString("yyyy-MM-ddTHH:mm:ssK") + " ; " + logtext + "\n";
+          	System.IO.File.AppendAllText(ActivityLogPath, text);  
+    	}
+    	catch (Exception e)
+        {
+        	Program.Notify("Log error:", e.Message);
+        }  		
+  	}  
+};
+
+Action&lt;int&gt; InitVirtualModules = (int number_modules) =&gt; {
+  int curr_modules = 0;
+  string logtext;
+  
+  RFM_MODULES.Each((x) =&gt; { ++curr_modules; return false;});  
+  
+  if (curr_modules == number_modules) return; // Everything ok, so do nothing
+  if (curr_modules &lt; number_modules) { // Add some modules more
+    for (int nextnumber = curr_modules + 1; nextnumber &lt;= number_modules; nextnumber++) {
+           
+    	Program.AddVirtualModule(MODULES_DOMAIN, nextnumber.ToString(), "Switch", MODULES_WIDGET);
+      	      
+      	var nm = RFM_MODULES.WithAddress(nextnumber.ToString()).Get();
+      	if (nm.Instance.Name == "") 		nm.Instance.Name = "Rfm Switch (" + nextnumber.ToString() +")";
+      	if (nm.Instance.Description == "") 	nm.Instance.Description = "Virtual module of Rfm switch " + nextnumber.ToString();
+      
+      	nm.Parameter("Rfm.Node").Value = nextnumber.ToString();
+  		nm.Parameter("Rfm.Boardtype").Value = "MOTEINO";
+  		nm.Parameter("Rfm.Port").Value = "A" + nextnumber.ToString();
+  		nm.Parameter("Rfm.Duration").Value = "30";
+        nm.Parameter("Rfm.IconOn").Value = "pages/control/widgets/rfm/images/wifi_on.png";
+        nm.Parameter("Rfm.IconOff").Value = "pages/control/widgets/rfm/images/wifi_off.png";
+        nm.Parameter("Rfm.Enable").Value = "1";
+        
+      	logtext = string.Format("Virtual module added: Name:{4}, Node:{0}, Boardtype:{1}, Port:{2}, Duration:{3}", 
+                  nm.Parameter("Rfm.Node").Value,
+                  nm.Parameter("Rfm.Boardtype").Value,
+                  nm.Parameter("Rfm.Port").Value,
+  				  nm.Parameter("Rfm.Duration").Value,
+                  nm.Instance.Name);          	
+        Log(logtext);
+             
+    } 
+  }
+  if (curr_modules &gt; number_modules) { // Remove the too much modules in reverse order
+    for (int n_remove = curr_modules; n_remove &gt; number_modules; n_remove--) { 
+      var mod = RFM_MODULES.WithAddress(n_remove.ToString()).Get();
+      if (mod != null) 
+      {
+        logtext = string.Format("Virtual module removed: Name:{4}, Node:{0},Boardtype:{1}, Port:{2}, Duration:{3}", 
+                                mod.Parameter("Rfm.Node").Value,
+                                mod.Parameter("Rfm.Boardtype").Value,
+                                mod.Parameter("Rfm.Port").Value,
+  								mod.Parameter("Rfm.Duration").Value,
+                               	mod.Instance.Name);          	
+        Log(logtext);
+        Program.RemoveVirtualModule(MODULES_DOMAIN, n_remove.ToString());
+      }
+   	}
+  }  
+};
+
+Func&lt;dynamic, bool&gt; InsertQueueCommand = (dynamic dyn) =&gt; { 
+  cmdQueue.Enqueue(dyn);
+  return true;
+};
+
+Func&lt;dynamic, bool&gt; SendCommand = (dynamic dyn) =&gt; {
+  
+  string message = "";
+  if (useJsonMessage == false) {
+  	message += "TRFM" + 					// Send RFM Command type 	length: 4
+    ",N:" + dyn.Node.PadLeft(3,'0') + 		// Send node number			length: 6
+    ",P:" + dyn.Port.PadRight(3,' ') + 		// Send port name			length: 6
+    ",C:" + dyn.Command.PadRight(10,' ') + 	// Send command string		length: 13
+    ",D:" + dyn.Duration.PadLeft(3,'0') +	// Send duration			length: 6
+    "\n";									// Send end string			length: 1
+    										// Protocol total			length: 36
+  }
+  else { // create a json send command string
+  	message = Newtonsoft.Json.JsonConvert.SerializeObject(dyn);
+    // is it necessary to send a final \r ?
+    // message += "\n";
+  }
+  
+  if (!IsDemo &amp;&amp; IsSerialConnected)
+    {    
+    	SerialPort.SendMessage(message);
+    	Log(message);
+  	}
+  else
+    {
+    	Log(message + " (DEMO)");
+  	}   
+  return true;
+};
+
+Func&lt;dynamic, bool&gt; IsCommandAndPinValid = (dynamic dyn) =&gt; {
+  // Dynamic structure: Name, Node, Port, Command, Duration
+ 
+  //----------------------------------------------------------------------------------------------------
+  // Command string validation
+  // Split command into sections and validate all split strings
+  // A command looks like 'receiver node' + 'pin' + 'command' + 'delaytime'
+  // like http://192.168.X.X/api/Rfm/11/A2/ON/30
+  // where  node  = 11
+  //        pin   = A2
+  //        cmd   = ON
+  //        delay = 30
+  //----------------------------------------------------------------------------------------------------  
+  // Nodes &lt; 10 are sender nodes and should not be used for receiver commands
+  //if (node &lt;= 10) return false; 
+  //
+  // check valid board pins for the boardtype of module with node 'node'
+  //
+  var bt = "";
+  RFM_MODULES.Each((m) =&gt; {
+    if (m.Parameter("Rfm.Node").Value == dyn.Node)
+    {
+    	bt = m.Parameter("Rfm.Boardtype").Value;
+    	return true; // break iteration
+   	}
+    return false; // don't break iteration, loop further
+    });
+  
+  if (bt == "") return false;
+  
+  return boards.Any( s =&gt; s.name == bt &amp;&amp; s.pins.Any(p =&gt; p == dyn.Port) &amp;&amp; s.cmd.Any(c =&gt; c == dyn.Command.ToUpper()));
+};
+
+//
+// This function is only used by anonymous hhtp calls for non defined widget driven nodes
+//
+Func&lt;dynamic, bool&gt; ValidateBoardPins = (dynamic dyn) =&gt; {
+  return boards.Any( s =&gt; s.cmd.Any(c =&gt; c == dyn.Command.ToUpper()) &amp;&amp; s.pins.Any(p =&gt; p == dyn.Port));
+};
+
+Func&lt;dynamic, bool&gt; InsertCommand = (dynamic dyn) =&gt; {
+  // Dynamic structure: Name, Node, Port, Command, Duration
+  if (IsCommandAndPinValid(dyn) == false) return false;
+  
+  bool useQueue = Program.Option("Rfm.UseQueue").Value.ToUpper() == "TRUE" || Program.Option("Rfm.UseQueue").Value.ToUpper() == "ON" ? true : false;
+  
+  var mod = Modules.InDomain(MODULES_DOMAIN).OfDeviceType("Switch").WithAddress(dyn.Address).Get();
+  if (mod.HasFeature("Rfm.Simulate") == false) 
+  {  
+  	return useQueue ? InsertQueueCommand(dyn) : SendCommand(dyn);
+  } 
+  return false;
+};
+
+When.ModuleParameterChanged((module, parameter) =&gt; {
+  var retValue = true;
+  
+	if (module.Instance.Domain == MODULES_DOMAIN){
+        switch (parameter.Name) {
+          case "Rfm.UseLog" :
+          	break;
+          
+          case "Rfm.Enable" :
+           	if (parameter.DecimalValue == 0){
+              module.Off();
+              Program.RaiseEvent(module, "Status.Level", "0", "Switched off");
+              Log(module.Instance.Name + " -&gt; switched off by disabling");
+              retValue = false;
+            } 
+          	break;
+          
+          case "Status.Level" :
+          	// Send message via serial port to arduino board
+          	dynamic cmdBlock = new System.Dynamic.ExpandoObject();
+           	cmdBlock.Name = module.Instance.Name;
+          	cmdBlock.Address = module.Instance.Address;
+  			cmdBlock.Node = module.Parameter("Rfm.Node").Value;
+  			cmdBlock.Port = module.Parameter("Rfm.Port").Value;
+  			cmdBlock.Command = (parameter.DecimalValue == 1) ? "On" : "Off";
+  			cmdBlock.Duration = module.Parameter("Rfm.Duration").Value;
+      
+          	InsertCommand(cmdBlock);          
+              
+          	// now create a self Control.Off timer task
+            if (module.Parameter("Rfm.Duration").DecimalValue &gt; 0)
+    		{
+    			if (parameter.Statistics.Last.Value == 0 &amp;&amp; parameter.DecimalValue &gt; 0)
+        		{
+          			// Run a background timer to switch off module after time Rfm.Duration
+        			var switchOffDelay = module.Parameter("Rfm.Duration").DecimalValue * 60;                  	                  
+                  	Program.RunAsyncTask(() =&gt; {
+                      							Log("Delayed switch off process '" + module.Instance.Name + "' started.");
+                      							while (switchOffDelay &gt; 0){                                                  
+                                                  if (module.Parameter("Status.Level").DecimalValue == 0) {
+                                                    Log("Delayed switch off process '" + module.Instance.Name + "' canceled.");
+                                                    System.Threading.Thread.CurrentThread.Abort();                                                    
+                                                  	}
+                                                  switchOffDelay -= 1;
+                                                  Pause(1);
+                                                }
+                      
+              									if (parameter.DecimalValue &gt; 0) {
+                									module.Off();
+                									Log(module.Instance.Name + "-" + module.Instance.Address + "-&gt; Automatic switched off after " + module.Parameter("Rfm.Duration").DecimalValue + " minutes");
+              									}
+            		});
+        		}
+            }
+          	retValue = true;
+          	break;          
+        }
+  }
+  // returning true, will route event to other listeners
+  return retValue;
+});
+
+Func&lt;string, bool&gt; IsJsonString = (string pureStr) =&gt; {
+  	var s = pureStr.Split('/');	// s[0] = module, s[1] = address
+  	var module = s[0];
+  	var address = s[1];
+  
+  	var jsonStr = Uri.UnescapeDataString(pureStr.Replace(module+"/"+address+"/",""));
+  	try {
+      		dynamic stuff = JObject.Parse(jsonStr);
+        } 
+  	catch (Exception e) { return false; }
+  	return true;
+};
+
+Func&lt;string, string&gt; ParseJson = (string args) =&gt; {
+  var s = args.Split('/');	// s[0] = module, s[1] = address
+  var module = Modules.InDomain(MODULES_DOMAIN).WithAddress(s[1]).Get();  
+  var strResponse = "{ \"ResponseValue\" : \"not defined, reqs.Count = " + s.Count() + "\" }";  
+  var res = Uri.UnescapeDataString(args.Replace(s[0]+"/"+s[1]+"/",""));
+  
+  dynamic json = JObject.Parse(res);
+  var cmd = (string)json.command.Value;
+  
+  Log(module.Instance.Name + " (ParseJson) -&gt; " + json.ToString());
+  
+  switch(cmd)
+  {
+    case "Program.GetIcons": // search all files of special path ...
+    	// args = "Rfm/1/%7B%22command%22:%22Program.GetIcons%22,%22files%22:[%22pages/control/widgets/rfm/images/%22]%7D"
+    	// {"command":"Program.GetIcons","files":["pages/control/widgets/homegenie/generic/images/icons/","pages/control/widgets/rfm/images/"]}
+    	var searchOption = System.IO.SearchOption.AllDirectories; 
+    	var filelist = new List&lt;string&gt;();
+  	
+    	// Log((string)json.files[0].Value); Get a file name 
+    
+        foreach (var path in json.files)
+        {
+          	filelist.AddRange(System.IO.Directory
+                              .GetFiles(System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "html", (string)path),"*.png")
+                              .Select(f =&gt; System.IO.Path.Combine((string)path,System.IO.Path.GetFileName(f))));        
+        }
+    
+    	strResponse= Newtonsoft.Json.JsonConvert.SerializeObject(new {files = filelist});
+       	//strResponse = "[" + Newtonsoft.Json.JsonConvert.SerializeObject(filelist) +"]";    
+      	break;
+    
+    case "Program.Upload":
+    	// {"filename":"wifi_off.png","data":"R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"}
+    	string filename = "-";
+    	try {
+        	filename = json["filename"];
+    		string fromBase64String = json["data"];
+    		var iconfilename = System.IO.Path.Combine(ICONPATH, filename);
+    		Log(module.Instance.Name + " -&gt; Program.Upload " + filename);
+    		System.IO.File.WriteAllBytes(iconfilename, Convert.FromBase64String((string)fromBase64String));
+    		
+          
+        }
+    	catch (Exception e) {
+      		Log("Upload processing error!: " + e.Message);
+    	}
+    	strResponse = "{ \"ResponseValue\" : \"Program.Upload=" + filename + "\" }";	
+    	break;
+  }
+  return strResponse;
+};
+
+Func&lt;string, string&gt; ParseArgs = (string args) =&gt; { 
+  
+  	// Attention:
+  	// the minimum content is a parameter string of 3 parts
+  	// eg. http://172.16.119.7/api/Rfm/4/Control.On
+  	// with args = Rfm/4/Control.On
+  	// args[0] = domain
+  	// args[1] = address
+  	// args[2] = command
+  	// args[3] = optional part with other content
+  	//			 like json string or other normal strings
+  	// Rfm/4/Rfm.Duration/59
+  	// args[3] = 59
+  	//
+  	// Rfm/4/A5/On/55
+  	// args[3] = On/59
+  	//
+  	// Rfm/4/Program.GetIcons/{"files" : ["pages/control/widget/rfm/images/","pages/control/widget/generic/images/icons""]}
+  	// args[3] = {"files" : ["pages/control/widget/rfm/images/","pages/control/widget/generic/images/icons"]}
+  	// Rfm/4/Program.GetIcons/'"pages/control/widget/rfm/images/","pages/control/widget/generic/images/icons"'
+  	// args[3] = '"pages/control/widget/rfm/images/","pages/control/widget/generic/images/icons"'
+
+  	string[] strParam = ((string)args).Replace("/'","#").Replace("'", "").Split('#');
+  	string[] reqs = strParam[0].Split('/');
+	string option = "";
+  
+  	var optionString = ((string)args).Replace(reqs[0]+"/"+reqs[1]+"/"+reqs[2]+"/",""); 
+  	
+  	// check for json content ...
+  	dynamic json = null;
+  
+  	try { json = JObject.Parse(Uri.UnescapeDataString(optionString)); }
+  	catch (Exception e){}
+  
+  	if ((json == null) &amp;&amp; (reqs.Length &gt; 3)) option = optionString;
+  	
+  	// separate complete option string
+  	if (strParam.Length &gt; 1) option = strParam[1];
+  
+  	var strResponse = "{ \"ResponseValue\" : \"no valid module '" + reqs[1] + "' found, reqs.Count = " + reqs.Count() + "\" }";    
+  	dynamic r;
+  
+	try 
+    {
+  	  	//
+    	// In case of url with 'TEST' string do not go further
+    	//
+  		if (((string)args).ToUpper().Contains("TEST")) 
+    	{
+      		//
+      		// Get the local IP address and add it to output string...
+      		//      
+      		strResponse = string.Format("Message not valid!\nValid format is http://{0}/api/Rfm/50/ON/A2/0", ipserver);
+      		Log(strResponse);
+      		return strResponse;
+    	}  
+  	
+      	//
+    	// parse api call 
+    	//
+    	string domain, address, command;
+    	string retValue = "";     
+        domain = reqs[0];
+        address = reqs[1];
+        command = reqs[2];
+
+      	var module = Modules.InDomain(domain).WithAddress(address).Get();
+      	switch(command)
+        	{
+              case "Control.On":	// set Status.Level
+              case "Control.Off":
+                  if (module.Parameter("Rfm.Enable").Value == "1") {
+                      Program.RaiseEvent(module, "Status.Level", (command == "Control.Off" ? "0" : "1"), "");
+                      last_updated = DateTime.Now.ToString("G"); 
+                      Program.RaiseEvent(module, "Rfm.LastUpdated", last_updated, "");
+                      retValue = "'" + module.Instance != null ? "'" + module.Instance.Name + "'": "directly" + "'";  
+                      strResponse = "{ \"ResponseValue\" : \"Module " + retValue + (command == "Control.Off" ? " stopped\" }" : " started\" }");
+                  }
+          		  else
+                  {
+                      strResponse = "{ \"ResponseValue\" : \"Direct address '" + address + "' " + (command == "Control.Off" ? " stopped\" }" : " started\" }");
+                  }
+                  break;
+         
+              case "Control.Parameter":	// get module parameter collection
+          		  r = new System.Dynamic.ExpandoObject();
+                  r.Name = module.Instance.Name;
+                  r.Node = module.Parameter("Rfm.Node").Value;
+                  r.Boardtype = module.Parameter("Rfm.Boardtype").Value;
+                  r.Port = module.Parameter("Rfm.Port").Value;
+                  r.Duration = module.Parameter("Rfm.Duration").Value;
+                  r.IconOn = module.Parameter("Rfm.IconOn").Value;
+                  r.IconOff = module.Parameter("Rfm.IconOff").Value;
+                  r.Enable = module.Parameter("Rfm.Enable").Value;
+                  strResponse = "[" + Newtonsoft.Json.JsonConvert.SerializeObject(r) + "]";  
+                break;
+        
+              case "Program.Parameter":	// get program parameter collection
+                   r = new System.Dynamic.ExpandoObject();
+                   r.Domain = MODULES_DOMAIN;
+                   r.Port = Program.Option("Rfm.Port").Value;
+                   r.Baudrate = Program.Option("Rfm.Baudrate").Value;
+                   r.Interval = Program.Option("Rfm.Interval").Value;
+                   r.UseQueue = Program.Option("Rfm.UseQueue").Value;
+                   r.QueueSize = Program.Option("Rfm.QueueSize").Value;
+                   r.VirtualModulesCount = Program.Option("Rfm.VirtualModulesCount").Value;
+          		   r.UseLog = Program.Option("Rfm.UseLog").Value;
+                   strResponse = "[" + Newtonsoft.Json.JsonConvert.SerializeObject(r) + "]";                                                              
+                 break;
+        
+              case "Control.Status":
+                   r = new System.Dynamic.ExpandoObject();
+                   r.Level = (module.Parameter("Status.Level").Value == "0") ? "Off" : "On";
+                   r.Duration = module.Parameter("Rfm.Duration").Value;
+                   r.Enable = module.Parameter("Rfm.Enable").Value == "1" ? "True" : "False";
+                   strResponse = "[" + Newtonsoft.Json.JsonConvert.SerializeObject(r) + "]";                                                              
+                  break;
+        
+              case "Controls.Stop":          	
+                  RFM_MODULES.Each((m) =&gt; {
+                      if ((m.Parameter("Status.Level").Value == "1") &amp;&amp; (m.Parameter("Rfm.Enable").Value == "1"))
+                      {
+                          m.Off();
+                          Program.RaiseEvent(m, "Status.Level", "0", "Switched off");
+                          retValue += "'" + m.Instance.Name + "', ";  
+                      }
+                      return false;
+                  });
+                  if (retValue.Length &gt; 0) retValue = retValue.Remove(retValue.Length - 2);
+                  strResponse = "{ \"ResponseValue\" : \"Program modules " + retValue + " stopped\" }";
+                break;
+
+              case "Controls.Enable":
+              case "Controls.Disable":
+                  RFM_MODULES.Each((m) =&gt; {
+                      m.Parameter("Rfm.Enable").Value = (command == "Controls.Disable" ? "0" : "1");
+                      retValue += "'" + m.Instance.Address + "', ";         
+                      return false;
+                  });
+                  if (retValue.Length &gt; 0) retValue = retValue.Remove(retValue.Length - 2);
+                  var str = "Program modules (" + retValue + ") " + (command == "Controls.Disable" ? "disabled!":"enabled!");
+                  Log(module.Instance.Name + str);
+                  strResponse = "{ \"ResponseValue\" : " + str + " }";
+                  break;
+
+              case "Control.Enable":
+              case "Control.Disable":
+                  module.Parameter("Rfm.Enable").Value = (command == "Control.Disable" ? "0": "1");
+                  Program.RaiseEvent(module, "Rfm.Enable", (command == "Control.Disable" ? "0": "1"), "");
+                  strResponse = "{ \"ResponseValue\" : \"module " + address + " " + (command == "Control.Disable" ? "disabled\" }" : "enabled\" }"); 
+                  break; 
+          
+			  case "Rfm.IconOn":    	
+                  if (strParam.Count() &gt; 1) Program.RaiseEvent(module,"Rfm.IconOn", option, "");	
+          		  strResponse = "{ \"ResponseValue\" : \"module " + address + " IconOn = '" + option + "' }"; 	
+            	  break;
+            
+              case "Rfm.IconOff":   	
+            	  if (strParam.Count() &gt; 1)Program.RaiseEvent(module,"Rfm.IconOff", option ,"");
+          		  strResponse = "{ \"ResponseValue\" : \"module " + address + " IconOff = '" + option + "' }"; 
+            	  break;
+          	  
+          	  // like http://172.16.119.7/api/Rfm/2/Rfm.Duration/59
+          	  case "Rfm.Duration":	
+          		  Program.RaiseEvent(module,"Rfm.Duration", 	option, "");	
+          		  strResponse = "{ \"ResponseValue\" : \"module " + address + " Duration = '" + option + "' }"; 
+          		  break;
+          
+          	  case "Rfm.Port":     	
+          		Program.RaiseEvent(module,"Rfm.Port",		option, "");  	
+          		strResponse = "{ \"ResponseValue\" : \"module " + address + " Port = '" + option + "' }"; 
+          		break;   
+          
+          	  case "Rfm.Node":		
+          		Program.RaiseEvent(module,"Rfm.Node", 		option, "");  	
+          		strResponse = "{ \"ResponseValue\" : \"module " + address + " Node = '" + option + "' }"; 
+          		break;
+          
+              case "Rfm.Boardtype": 
+          		Program.RaiseEvent(module,"Rfm.Boardtype", 	option, "");	
+          		strResponse = "{ \"ResponseValue\" : \"module " + address + " Boardtype = '" + option + "' }"; 
+          		break;
+          
+          	  case "Program.GetIcons": // search all files of special path ...
+          		  if (json != null || option != "")
+                  {
+                    var searchOption = System.IO.SearchOption.AllDirectories; 
+    				var filelist = new List&lt;string&gt;();
+  					strResponse="XYZ:";
+    				// Log((string)json.files[0].Value); Get a file name 
+    				foreach (var path in (json != null ? json.files : option.Split(',')))
+                    {
+                      strResponse = path;
+                      filelist.AddRange(System.IO.Directory
+                                        .GetFiles(System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "html", (string)path),"*.png")
+                                        .Select(f =&gt; System.IO.Path.Combine((string)path,System.IO.Path.GetFileName(f))));        
+                    }                   
+    				strResponse= Newtonsoft.Json.JsonConvert.SerializeObject(new {files = filelist});
+                  }
+       			  break;
+          
+          	 // NEW 7.9.2016 --&gt;
+          	 case "Program.GetLogs": // return the filtered content of the rfmswitch log file
+          		var linelist = new List&lt;string&gt;();
+          		var filelines = System.IO.File.ReadLines(ActivityLogPath);
+				foreach (var line in filelines)
+                {
+                	linelist.Add(line);
+                }          		
+          		strResponse = Newtonsoft.Json.JsonConvert.SerializeObject(new {lines = linelist});
+          		break;
+          	// &lt;--
+          
+          	// NEW 27.8.2016 --&gt;
+          	case "Program.GetBoardPins":
+          		strResponse = Newtonsoft.Json.JsonConvert.SerializeObject(boards) ;
+          		break;
+          	// &lt;--
+          
+          	case "Program.Upload":
+    			// {"filename":"wifi_off.png","data":"R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"}
+    			string filename = "-";
+                try {
+                    filename = json["filename"];
+                    string fromBase64String = json["data"];
+                    var iconfilename = System.IO.Path.Combine(ICONPATH, filename);
+                    Log(module.Instance.Name + " -&gt; Program.Upload " + filename);
+                    System.IO.File.WriteAllBytes(iconfilename, Convert.FromBase64String((string)fromBase64String));
+                }
+                catch (Exception e) {
+                    Log("Upload processing error!: " + e.Message);
+                }
+    			strResponse = "{ \"ResponseValue\" : \"Program.Upload=" + filename + "\" }";	
+    			break;	
+          
+          	  // like http://172.16.119.7/api/Rfm/0/On/78/A5/35
+              //                               0  1  2  3  4  5
+          	  // domain -----------------------|  |  |	|  |  |	
+          	  // address -------------------------|  |	|  |  |
+          	  // command ----------------------------|	|  |  |
+          	  // node ----------------------------------|  |  |
+          	  // port -------------------------------------|  |
+              // duration ------------------------------------|
+          
+          	  case "On":
+          	  case "ON":
+          	  case "on":
+          	  case "Off":
+              case "OFF":
+          	  case "off":
+          		int modaddress = 0;
+          		string[] o = option.Split('/');
+          		// Dynamic structure: Name, Node, Port, Command, Duration
+                r = new System.Dynamic.ExpandoObject();
+          		r.Name = "";
+          		r.Command = reqs[2].ToUpper();
+          		r.Node = (o.Length &gt; 0) ? o[0] : "0";
+          		r.Port = (o.Length &gt; 1) ? o[1] : "0";
+          		r.Duration = (o.Length &gt; 2) ? o[2] : "0";
+          
+          		string message = r.Node + DELIMITER_CHAR + r.Port + DELIMITER_CHAR + r.Command + DELIMITER_CHAR + r.Duration;
+          		
+          		// Is there a virtual module with this node and this pin assigned then use it and change status of it
+                RFM_MODULES.Each((vd) =&gt;
+                                 {           
+                                   if ((vd.Parameter("Rfm.Node").Value == r.Node) &amp;&amp; (vd.Parameter("Rfm.Port").Value == r.Port))
+                                   {
+                                     modaddress = int.Parse(vd.Instance.Address);
+                                   }
+                                   return false;
+                                 }); 
+          		if (modaddress &gt; 0)
+                {
+                  var mod = RFM_MODULES.WithAddress(modaddress.ToString()).Get();  
+                  r.Name = mod.Instance.Name;          
+                  Program.RaiseEvent(mod, "Status.Level", r.Command == "ON" ? "1" : "0", "Switched on/off directly");
+                  Log(r.Name + " -&gt; Message Status.Level '" + message + "' sucessfull!");
+                  strResponse = "{ \"ResponseValue\" : \"Status.Level=" + r.Command + " for module address " + modaddress + "\" }";
+                }
+                else
+                {
+                  r.Name = "Direct node access";                 
+                  
+                  if (ValidateBoardPins(r) == true)
+                  {
+                    SendCommand(r);
+                    Log(r.Name + " -&gt; Message '" + message + "' sucessfull!");
+					strResponse = "{ \"ResponseValue\" : \"Status.Level='" + r.Command + 
+                      				"' for node address '" + r.Node + 
+                      				"' and port '" + r.Port +
+                      				"'" + (r.Duration != "0" ? " and duration '" + r.Duration + "'" : "") + " changed!\" }";
+                  }
+                  else
+                  {
+                    	Log(r.Name + " -&gt; Message '" + message + "' not sucessfull!"); 
+                    	strResponse = "{ \"ResponseValue\" : \"Status.Level='" + r.Command + 
+                      				"' for node address '" + r.Node + 
+                      				"' and port '" + r.Port +
+                      				"'" + (r.Duration != "0" ? " and duration '" + r.Duration + "'" : "") + " NOT changed!\" }";
+                  }
+                }
+          		
+          		break;
+              
+              default:
+                  strResponse = "{ \"ResponseValue\" : \"unrecognized command (3 reqs) '" + command + "' received\". Try ";
+          		  foreach(var x in validWebCommands)
+                  {
+                  	strResponse += "\r\n" + String.Format("{0,-25} | {1,-110} | {2,-100}", x.command, x.example, x.description);  
+                  }
+                  strResponse += "\r\n\" }";          
+          
+          		  Program.Notify("RfmSwitch", "unrecognized command (3 reqs) '" + command + "'received.");
+                  break;
+      		} 
+    } 
+  	catch (Exception e) {
+      return "ParseArgs-Error: " +e.Message + strResponse;
+    }
+  	return strResponse;
+};
+
+
+//----------------------------------------------------------------------------------------------------
+// implement web serice API On, Off and others
+// for this domain.
+//----------------------------------------------------------------------------------------------------
+When.WebServiceCallReceived(MODULES_DOMAIN, ( args ) =&gt; {
+  	//Log("Pure string=" + (string)args);
+  	var strResponse = "{ \"ResponseValue\" : \"not defined\"}";
+  	
+  	try
+    {
+  	  if (IsJsonString((string)args) == true)
+    	{
+           	strResponse = ParseJson((string)args);  
+    	}	
+  	  else
+    	{
+        	strResponse = ParseArgs((string)args);
+    	}
+    }
+  	catch (Exception ex) 
+  	{
+    	strResponse = string.Format("Error with parameter '{1}'{0}{2}", Environment.NewLine, (string)args, ex.StackTrace);
+  	}
+    
+  	return strResponse;
+});
+
+//
+// This action is fired if a string message is received from serial port
+//
+Action&lt;string&gt; HandleStringReceived = (string message) =&gt; { 
+    Program.Notify("SerialPort String", message);
+};
+
+When.ProgramStopping( () =&gt;
+{
+  //
+  // Switch off all controls with enabled parameter 'CentralOff'
+  //
+  Modules.WithFeature("Rfm.CentralOff").Off();
+  
+  return true;
+});
+
+When.SystemStopping( () =&gt;
+{
+ 	// Do something if system is stopping
+  	// ...
+  
+	// returning true will route this event to other listeners
+	return true;
+});
+ 
+//
+// This action is fired if a byte[] message is received from serial port
+//
+Action&lt;byte[]&gt; HandleMessageReceived = (byte[] message) =&gt; {  
+	Program.Notify("SerialPort Bytes", BitConverter.ToString(message));
+};
+
+//
+// This action is fired if the serial port connection status changes
+//
+Action&lt;bool&gt; HandleStatusChanged = (bool connected) =&gt; {
+  	
+  	if (connected != IsSerialConnected)
+    {
+    	Program.Notify("SerialPort Status", connected ? "CONNECTED!" : "DISCONNECTED!");
+      	IsSerialConnected = connected;
+    }  	
+};
+
+//
+// Sends current existing commands of queue to serial port
+// and waits 'waitingtime' seconds between each command.
+//
+Action&lt;int&gt; ExecuteQueueCommands = (int timebetweencommands) =&gt; {
+   while (cmdQueue.Count &gt; 0) 
+   {
+     // send entry to port
+     var r = cmdQueue.Dequeue();
+     if (r != null) SendCommand(r);
+     Pause(timebetweencommands);
+   }
+};
+
+//
+// Open the serial port channel and register handlers
+// do this once the program is enabled
+//
+var portName = Program.Option("Rfm.Port").Value;
+int baudRate;
+int.TryParse(Program.Option("Rfm.Baudrate").Value, out baudRate);
+
+//
+// Start serial communication
+//
+if (!IsDemo) SerialPort.WithName( portName )
+  					   	.OnStatusChanged( HandleStatusChanged )
+  						.OnMessageReceived( HandleMessageReceived )
+  						.OnStringReceived( HandleStringReceived )
+  						.Connect(baudRate);
+    
+//
+// Create i.e. 7 virtual modules with the domain
+// "HomeAutomation.RfmSwitch" and with address from 1 to i.e. 7
+// "Switch" is the type and the widget "rfm/arduino/switch"
+//
+InitVirtualModules(int.Parse(Program.Option("Rfm.VirtualModulesCount").Value));
+
+//
+// Re-Enable all modules during startup
+//
+RFM_MODULES.Each((m) =&gt; { m.Parameter("Rfm.Enable").Value = "1"; return false; });
+
+//
+// main program loop
+// send a test message through serial port every 'updaterate' seconds          
+//
+while (Program.IsEnabled)
+{
+  ExecuteQueueCommands(1);
+  Pause(updateRate);   
+}
+</ScriptSource>
+  <ScriptErrors>[]</ScriptErrors>
+  <Domain>HomeAutomation.HomeGenie.Automation</Domain>
+  <Address>3953</Address>
+  <Name>Rfm Switch Program</Name>
+  <Description>Add virtual moddules of Arduino style RFM69HW transceiver board to be addressed by serial interface between HG (on Raspberry Pi or CubieTruck). 
+It could be used by wigdet driven control and directly using URL commands like
+'http://192.168.X.X/api/Rfm/11/A2/ON/30'</Description>
+  <Group>CubieTruck</Group>
+  <Features>
+    <ProgramFeature>
+      <FieldType>checkbox</FieldType>
+      <ForDomains>Rfm</ForDomains>
+      <ForTypes>Switch</ForTypes>
+      <Property>Rfm.CentralOff</Property>
+      <Description>Switch all devices off when HG stops</Description>
+    </ProgramFeature>
+    <ProgramFeature>
+      <FieldType>checkbox</FieldType>
+      <ForDomains>Rfm</ForDomains>
+      <ForTypes>Switch</ForTypes>
+      <Property>Rfm.Simulate</Property>
+      <Description>Simulate only</Description>
+    </ProgramFeature>
+  </Features>
+  <ActivationTime>2016-09-13T09:38:41.151761Z</ActivationTime>
+  <TriggerTime>2016-09-13T09:38:41.459243Z</TriggerTime>
+  <Type>CSharp</Type>
+  <IsEnabled>true</IsEnabled>
+</ProgramBlock>
