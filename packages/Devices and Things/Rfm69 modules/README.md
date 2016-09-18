@@ -56,7 +56,7 @@ and you can directly select a duration time and switch device on or off
 ### Hardware needs
 
 Any serial connected microcontroller driven device with an Rfm69 transceiver chip as the Gateway device (i used Moteino and MoteinoMEGA from https://lowpowerlab.com/
-multiple Rfm69 transceiver driven devices as actors or sensor (sensor part i not included in the example)
+multiple Rfm69 transceiver driven devices as actors or sensor (sensor part is not included in the example)
 
 See <a href="https://lowpowerlab.com/category/moteino/">detailed instructions of Moteino here</a>.   
 
