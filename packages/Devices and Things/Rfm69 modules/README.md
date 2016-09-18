@@ -114,8 +114,8 @@ Func<dynamic, bool> SendCommand = (dynamic dyn) => {
 |-----------------------|-------------------------------------------------------------------------------|
 | Control.On  	       	| example = ipserver + /api/Rfm/5/Control.On					|
 | Control.Off	       	| example = ...									|
-| Control.Enable	|										|
-| Control.Disable	|										|
+| Control.Enable	| enable a device to receive on off coammnds					|
+| Control.Disable	| disable a device, so no commands could be transmitted to			|
 | Control.Status	| get level, duration and enable status						|
 | Control.Parameter 	| get name, board, port, duration, on/off icons and enabled status		|
 | Controls.Enable	| set ALL wizard driven module to enabled					|
