@@ -1,4 +1,4 @@
-# System to control Arduino clones with a transceiver system (EDUCATION version)
+# System to control 'Arduino clones with a transceiver' (EDUCATION version)
 ---
 With this package you can control any type of arduino clones with a build in transceiver module to remote control a bunch of actors for different requests   
 I.e. use Arduino clone **Moteino** or **MoteinoMEGA** and others to control remote Rfm69 driven switches.  
