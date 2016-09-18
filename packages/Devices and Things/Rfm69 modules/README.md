@@ -2,7 +2,7 @@
 
 With this package you can control any type of arduino clones with a build in transceiver module to remote control a bunch of switch devices for different requests
 
-I.e. use Arduino clone **Moteino** or **MoteinoMEGA** and others to control remote Rfm69 driven switches. 
+I.e. use Arduino clone **Moteino** or **MoteinoMEGA** and others to control remote HopeRF RFM69 radio transceiver driven switches. 
 
 This app is written as a full functional **EDUCATION** version to help others understanding the full functionality of HomeGenie and the new widget style V2.
 
