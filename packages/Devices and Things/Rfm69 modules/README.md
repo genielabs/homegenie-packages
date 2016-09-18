@@ -13,7 +13,7 @@ THe JavaScript widget offers extended functionalities like:
 + selector for on/off icons
 
 ## Instructions
----
+
 Install the package with app and widget.
 The package includes also some images and language files for English and German (others could be easily added)
 
@@ -49,14 +49,14 @@ and you can directly select a duration time and switch device on or off
 + ON / Off slider
 
 ### Hardware needs
----
+
 Any serial connected microcontroller driven device with an Rfm69 transceiver chip as the Gateway device (i used Moteino and MoteinoMEGA from https://lowpowerlab.com/
 multiple Rfm69 transceiver driven devices as actors or sensor (sensor part i not included in the example)
 
 See <a href="https://lowpowerlab.com/category/moteino/">detailed instructions of Moteino here</a>.   
 
 ### Board and pin configuration
----
+
 ```js
 var boards = new[] { 
   new { 
@@ -75,7 +75,7 @@ var boards = new[] {
 
 ...
 ### Interface structure
----
+
 ```js
 Func<dynamic, bool> SendCommand = (dynamic dyn) => {
   
@@ -106,7 +106,7 @@ Func<dynamic, bool> SendCommand = (dynamic dyn) => {
 };
 ```
 ### Supported api calls
----
+
 + Control.On  		example = ipserver + /api/Rfm/5/Control.On
 + Control.Off		example = ...
 + Control.Enable	
