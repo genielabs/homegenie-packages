@@ -57,7 +57,7 @@ See <a href="https://lowpowerlab.com/category/moteino/">detailed instructions of
 
 ### Board and pin configuration
 ---
-{
+...
 var boards = new[] { 
   new { 
     name = "MOTEINO", 		
@@ -71,7 +71,7 @@ var boards = new[] {
                     "PB5","PB6","PB7","PC0","PC1","PC2","PC3","PC4","PC5","PC6","PC7","PD0","PD1","PD2","PD3","PD4","PD5","PD6" },
     cmd = new[]  {  "ON","OFF","TEST","GET"}}
 	};
-}
+...
 ### Interface structure
 ---
 
