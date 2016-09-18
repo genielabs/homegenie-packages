@@ -46,7 +46,6 @@ The module widget supports the following module parameters:
 | Pin			| Available pins of selected board, **could be easily modified in HGX app**	|
 | On Icon		| Select an ON icon out of server side image path				|
 | Off Icon		| Select an OFF icon out of server side image path				|
-|-----------------------|-------------------------------------------------------------------------------|
 
 + Support for uploading PNG images to server path
 	
