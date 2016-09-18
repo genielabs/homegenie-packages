@@ -55,6 +55,23 @@ multiple Rfm69 transceiver driven devices as actors or sensor (sensor part i not
 
 See <a href="https://lowpowerlab.com/category/moteino/">detailed instructions of Moteino here</a>.   
 
+### Board and pin configuration
+---
+{
+var boards = new[] { 
+  new { 
+    name = "MOTEINO", 		
+    pins = new[] { 	"A0","A1","A2","A3","A4","A5","A6", "A7", "D0","D1","D2","D3","D4","D5","D6","D7","D8","D9","D10","D11","D12","D13","D14","D15","D16","D17","D18","D19",
+    				"PB0","PB1","PB2","PB3","PB4","PB5","PC0","PC1","PC2","PC3","PC4","PC5", "PD0","PD1","PD2","PD3","PD4","PD5","PD6", "PD7" },
+    cmd = new[]  {  "ON","OFF","TEST","GET"}},
+  new { 
+    name = "MOTEINOMEGA", 	
+    pins = new[] {	"A0","A1","A2","A3","A4","A5","A6", "A7", "D0","D1","D2","D3","D4","D5","D6","D7","D8","D9","D10","D11","D12","D13","D14","D15","D16","D17","D18","D19",
+                    "D20","D21","D22","D23","D24","D25","D26","D27","D28","D29","D30","D31","PA0","PA1","PA2","PA3","PA4","PA5","PA6","PA7","PB0","PB1","PB2","PB3","PB4",
+                    "PB5","PB6","PB7","PC0","PC1","PC2","PC3","PC4","PC5","PC6","PC7","PD0","PD1","PD2","PD3","PD4","PD5","PD6" },
+    cmd = new[]  {  "ON","OFF","TEST","GET"}}
+	};
+}
 ### Interface structure
 ---
 
