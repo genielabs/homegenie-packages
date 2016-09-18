@@ -105,27 +105,28 @@ Func<dynamic, bool> SendCommand = (dynamic dyn) => {
 };
 ```
 ### Supported api calls
-
-+ Control.On  		example = ipserver + /api/Rfm/5/Control.On
-+ Control.Off		example = ...
-+ Control.Enable	
-+ Control.Disable	
-+ Control.Status	get level, duration and enable status	
-+ Control.Parameter 	get name, board, port, duration, on/off icons and enabled status
-+ Controls.Enable	set ALL wizard driven module to enabled
-+ Controls.Disable	set ALL wizard driven module to disabled and switch them off
-+ Controls.Stop		switch off all 'still active' moduls
-+ Program.GetIcons	get a list of all stored icons in path ...
-+ Program.Parameter	get domain, serial port, baud rate, interval ... from program
-+ Program.GetBoardPins	return a list of all possible board pins
-+ Rfm.IconOn		set the module wizard 'on icon image'
-+ Rfm.IconOff		set the module wizard 'off icon image'
-+ Rfm.Boardtype		set the dedicated board type of a module
-+ Rfm.Duration		set the switch on duration
-+ Rfm.Node		set the module node
-+ Rfm.Port		set the module port
-+ On			switch on a free selected node without a existing virtual module
-+ Off			switch on a free selected node without a existing virtual module
+| API call             	| description                                                                 	|
+|-----------------------|-------------------------------------------------------------------------------|
+| Control.On  	       	| example = ipserver + /api/Rfm/5/Control.On					|
+| Control.Off	       	| example = ...									|
+| Control.Enable	|										|
+| Control.Disable	|										|
+| Control.Status	| get level, duration and enable status						|
+| Control.Parameter 	| get name, board, port, duration, on/off icons and enabled status		|
+| Controls.Enable	| set ALL wizard driven module to enabled					|
+| Controls.Disable	| set ALL wizard driven module to disabled and switch them off			|
+| Controls.Stop		| switch off all 'still active' moduls						|
+| Program.GetIcons	| get a list of all stored icons in path ...					|
+| Program.Parameter	| get domain, serial port, baud rate, interval ... from program			|
+| Program.GetBoardPins	| return a list of all possible board pins					|
+| Rfm.IconOn		| set the module wizard 'on icon image'						|
+| Rfm.IconOff		| set the module wizard 'off icon image'					|
+| Rfm.Boardtype		| set the dedicated board type of a module					|
+| Rfm.Duration		| set the switch on duration							|
+| Rfm.Node		| set the module node								|
+| Rfm.Port		| set the module port								|
+| On			| switch on a free selected node without a existing virtual module		|
+| Off			| switch on a free selected node without a existing virtual module		|
 
 ## Enjoy this package as a helper to develop your own things
 **Wolfgang Otto, September 2016**
