@@ -76,7 +76,35 @@ var boards = new[] {
 ...
 ### Interface structure
 ---
-
+```js
+Func<dynamic, bool> SendCommand = (dynamic dyn) => {
+  
+  string message = "";
+  if (useJsonMessage == false) {
+    message += "TRFM" + 			// Send RFM Command type 	length: 4
+    ",N:" + dyn.Node.PadLeft(3,'0') + 		// Send node number		length: 6
+    ",P:" + dyn.Port.PadRight(3,' ') + 		// Send port name		length: 6
+    ",C:" + dyn.Command.PadRight(10,' ') + 	// Send command string		length: 13
+    ",D:" + dyn.Duration.PadLeft(3,'0') +	// Send duration		length: 6
+    "\n";					// Send end string		length: 1
+    						// Protocol total		length: 36
+  }
+  else { // create a json send command string
+  	message = Newtonsoft.Json.JsonConvert.SerializeObject(dyn);
+  }
+  
+  if (!IsDemo && IsSerialConnected)
+    {    
+    	SerialPort.SendMessage(message);
+    	Log(message);
+  	}
+  else
+    {
+    	Log(message + " (DEMO)");
+  	}   
+  return true;
+};
+```
 ### Supported api calls
 ---
 + Control.On  		example = ipserver + /api/Rfm/5/Control.On
