@@ -56,7 +56,7 @@ multiple Rfm69 transceiver driven devices as actors or sensor (sensor part i not
 See <a href="https://lowpowerlab.com/category/moteino/">detailed instructions of Moteino here</a>.   
 
 ### Board and pin configuration
-
+---
 ```js
 var boards = new[] { 
   new { 
@@ -73,9 +73,8 @@ var boards = new[] {
 	};  
 ```
 
-...
 ### Interface structure
-
+---
 ```js
 Func<dynamic, bool> SendCommand = (dynamic dyn) => {
   
