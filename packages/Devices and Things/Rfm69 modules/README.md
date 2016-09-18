@@ -1,11 +1,13 @@
 # Control 'Arduino clones with a transceiver' (EDUCATION version)
 
-With this package you can control any type of arduino clones with a build in transceiver module to remote control a bunch of actors for different requests   
-I.e. use Arduino clone **Moteino** or **MoteinoMEGA** and others to control remote Rfm69 driven switches.  
+With this package you can control any type of arduino clones with a build in transceiver module to remote control a bunch of switch devices for different requests
+
+I.e. use Arduino clone **Moteino** or **MoteinoMEGA** and others to control remote Rfm69 driven switches. 
+
 This app is written as a full functional **EDUCATION** version to help others understanding the full functionality of HomeGenie and the new widget style V2.
 
-This packages consists of a HGX program (C#) and a widget (V2 sytle). THe program acts as the RESTFull service container for all requests from assigned widget   
-THe JavaScript widget offers extended functionalities like: 
+This packages consists of a HGX program (C#) and a widget (V2 sytle). The program acts as the RESTFull service container for all requests from assigned widget   
+The JavaScript widget offers extended functionalities like: 
 + free configuration of Rfm69 nodes, pins and addresses 
 + separate log file for all interactions
 + Graph to display all switch times with filterable content
@@ -15,12 +17,12 @@ THe JavaScript widget offers extended functionalities like:
 ## Instructions
 
 Install the package with app and widget.
-The package includes also some images and language files for English and German (others could be easily added)
+The package includes also some images and language files for English and German (**others could be easily added**)
 
-*You need to install the additional js package 'FileSaver.js' into the /usr/local/bin/homegenie/html/js path* 
+*You need to have the additional js package 'FileSaver.js'. Therefore i included a subdirectory with these files. As an alterantive you could place these files into the /usr/local/bin/homegenie/html/js path* 
 See <a href="https://github.com/eligrey/FileSaver.js/"> FileSaver download page</a>
 
-Start 'Rfm Switch Program'HGX programm   
+After intsalltion the 'Rfm Switch Program' HGX programm is started automatically and    
 the program is 'preconfigured' and uses the following parameters
 
 + Rfm.NetId: 			7  		- Network ID for all remote devices
@@ -37,11 +39,15 @@ Configure a prefered group and select  'Rfm switch' modules
 
 The module widget supports the following module parameters:
 
-+ Node:				address of RFM69 module to send commands to
-+ Boardtype:		Moteino or MoteinoMEGA, **could be easily modified in HGX app**
-+ Pin:				Available pins of selected board, **could be easily modified in HGX app**
-+ On Icon:			Select an ON icon out of server side image path
-+ Off Icon:			Select an OFF icon out of server side image path
+| Parameter           	| description                                                                 	|
+|-----------------------|-------------------------------------------------------------------------------|
+| Node	 	       	| address of RFM69 module to send commands to  					|
+| Boardtype	       	| **Moteino** or **MoteinoMEGA**, could be easily modified in HGX app		|
+| Pin			| Available pins of selected board, **could be easily modified in HGX app**	|
+| On Icon		| Select an ON icon out of server side image path				|
+| Off Icon		| Select an OFF icon out of server side image path				|
+|-----------------------|-------------------------------------------------------------------------------|
+
 + Support for uploading PNG images to server path
 	
 and you can directly select a duration time and switch device on or off
