@@ -1,0 +1,27 @@
+{
+    "author": "Wolfgang Otto",
+    "version": "v1.05",
+    "title": "Rfm switch",
+    "description": "Control Rfm69 transceiver driven modules",
+    "published": "2016-09-17T18:00:00Z",
+    "sourcecode": "",
+    "homepage": "", 
+    "widgets": [ 
+        { 
+            "file": "rfm_arduino_switch.zip",
+            "name":"Rfm Switch Widget",
+            "description": "Widget to control Rfm switch devices"
+        }
+    ],
+
+    "programs": [
+        { 
+            "file": "Rfm_Switch_Program.hgx",
+            "name":"Rfm Switch Program",
+            "description": "Control Rfm69 transceiver driven modules",
+            "uid": "3953",
+            "group": "Devices and Things" 
+        }
+    ],
+    "interfaces": [ ]
+}
