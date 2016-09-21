@@ -29,7 +29,7 @@ When.ModuleParameterChanged( (module, property) =&gt; {
 Program.GoBackground();</ScriptSource>
   <ScriptErrors>[]</ScriptErrors>
   <Domain>HomeAutomation.HomeGenie.Automation</Domain>
-  <Address>10999</Address>
+  <Address>145</Address>
   <Name>Pushsafer</Name>
   <Description><a target="_blank" href="https://www.pushsafer.com">Your Pushsafer.com Dashboard</a></Description>
   <Group>Messaging and Social</Group>
