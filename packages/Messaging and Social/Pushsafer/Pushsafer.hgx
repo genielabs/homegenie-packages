@@ -3,7 +3,7 @@
   <ConditionType>OnTrue</ConditionType>
   <Conditions />
   <Commands />
-  <ScriptCondition>Program.AddFeature("", "Switch,Dimmer,Light,Siren,Sensor,Program,DoorWindow", "Pushsafer.PrivateKey", "Pushsafer Private or Alias Key", "text");
+  <ScriptCondition>Program.AddFeature("", "Switch,Dimmer,Light,Siren,Sensor,Program,DoorWindow", "Pushsafer.DeviceId", "Pushsafer Private or Alias Key", "text");
 Program.Run();
 </ScriptCondition>
   <ScriptSource>var serviceurl = "https://www.pushsafer.com/api";
@@ -11,9 +11,9 @@ Program.Run();
 // We want to do further processing whenever a module changes 
 When.ModuleParameterChanged( (module, property) =&gt; {
 
-  if (module.HasFeature("Pushsafer.PrivateKey") &amp;&amp; (property.Name.StartsWith("Sensor.") || property.Name.StartsWith("Status.")))
+  if (module.HasFeature("Pushsafer.DeviceId") &amp;&amp; (property.Name.StartsWith("Sensor.") || property.Name.StartsWith("Status.")))
   {
-    var serviceparams = "?k=" + module.Parameter("Pushsafer.PrivateKey").Value;
+    var serviceparams = "?k=" + module.Parameter("Pushsafer.DeviceId").Value;
     
     serviceparams += "&amp;t=" + module.Instance.Name;
     serviceparams += "&amp;m=" + property.Name + ' ' + property.Value;
