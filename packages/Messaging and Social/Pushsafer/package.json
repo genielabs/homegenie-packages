@@ -12,7 +12,7 @@
             "file": "Pushsafer.hgx",
             "name":"Pushsafer",
             "description": "Pushsafer notifications to iOS, Android and Windows 10 (phone and desktop) devices",
-            "uid": "10999",
+            "uid": "145",
             "group": "Messaging and Social" 
         }
     ],
