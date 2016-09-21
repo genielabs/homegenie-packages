@@ -31,7 +31,7 @@ Program.GoBackground();</ScriptSource>
   <Domain>HomeAutomation.HomeGenie.Automation</Domain>
   <Address>146</Address>
   <Name>Pushsafer</Name>
-  <Description><a target="_blank" href="https://www.pushsafer.com">Your Pushsafer.com Dashboard</a></Description>
+  <Description>Pushsafer notifications to iOS, Android and Windows 10 (phone and desktop) devices</Description>
   <Group>Messaging and Social</Group>
   <Features />
   <ActivationTime xsi:nil="true" />
