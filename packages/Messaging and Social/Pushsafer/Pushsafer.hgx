@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-16"?>
+<ProgramBlock xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <ConditionType>OnTrue</ConditionType>
+  <Conditions />
+  <Commands />
+  <ScriptCondition>Program.AddFeature("", "Switch,Dimmer,Light,Siren,Sensor,Program,DoorWindow", "Pushsafer.DeviceId", "Pushsafer Private or Alias Key", "text");
+Program.Run();
+</ScriptCondition>
+  <ScriptSource>var serviceurl = "https://www.pushsafer.com/api";
+
+// We want to do further processing whenever a module changes 
+When.ModuleParameterChanged( (module, property) =&gt; {
+
+  if (module.HasFeature("Pushsafer.DeviceId") &amp;&amp; (property.Name.StartsWith("Sensor.") || property.Name.StartsWith("Status.")))
+  {
+    var serviceparams = "?k=" + module.Parameter("Pushsafer.DeviceId").Value;
+    
+    serviceparams += "&amp;t=" + module.Instance.Name;
+    serviceparams += "&amp;m=" + property.Name + " " + property.Value;
+    
+    Net.WebService(serviceurl + serviceparams).Call();
+  }
+
+  // returning true, will route event to other listeners
+  return true; 
+
+});
+
+Program.GoBackground();</ScriptSource>
+  <ScriptErrors>[]</ScriptErrors>
+  <Domain>HomeAutomation.HomeGenie.Automation</Domain>
+  <Address>146</Address>
+  <Name>Pushsafer</Name>
+  <Description>Pushsafer notifications to iOS, Android and Windows 10 (phone and desktop) devices</Description>
+  <Group>Messaging and Social</Group>
+  <Features />
+  <ActivationTime xsi:nil="true" />
+  <TriggerTime xsi:nil="true" />
+  <Type>CSharp</Type>
+  <IsEnabled>false</IsEnabled>
+</ProgramBlock>

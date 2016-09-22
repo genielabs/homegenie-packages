@@ -1,0 +1,20 @@
+{
+    "author": "Appzer.de Kevin Siml",
+    "version": "v1.0",
+    "title": "Pushsafer",
+    "description": "Pushsafer notifications to iOS, Android and Windows 10 (phone and desktop) devices",
+    "published": "2016-09-21T00:00:00Z",
+    "sourcecode": "https://github.com/appzer/homegenie-packages/tree/master/packages/Messaging%20and%20Social/Pushsafer",
+    "homepage": "https://www.pushsafer.com", 
+    "widgets": [ ],
+    "programs": [
+        { 
+            "file": "Pushsafer.hgx",
+            "name":"Pushsafer",
+            "description": "Pushsafer notifications to iOS, Android and Windows 10 (phone and desktop) devices",
+            "uid": "146",
+            "group": "Messaging and Social" 
+        }
+    ],
+    "interfaces": [ ]
+}
