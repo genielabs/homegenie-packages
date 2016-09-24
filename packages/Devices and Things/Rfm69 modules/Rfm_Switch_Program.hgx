@@ -139,33 +139,32 @@ Action&lt;int&gt; InitVirtualModules = (int number_modules) =&gt; {
   string logtext;
   
   RFM_MODULES.Each((x) =&gt; { ++curr_modules; return false;});  
-  
   if (curr_modules == number_modules) return; // Everything ok, so do nothing
   if (curr_modules &lt; number_modules) { // Add some modules more
-    for (int nextnumber = curr_modules + 1; nextnumber &lt;= number_modules; nextnumber++) {
-           
-    	Program.AddVirtualModule(MODULES_DOMAIN, nextnumber.ToString(), "Switch", MODULES_WIDGET);
-      	      
-      	var nm = RFM_MODULES.WithAddress(nextnumber.ToString()).Get();
-      	if (nm.Instance.Name == "") 		nm.Instance.Name = "Rfm Switch (" + nextnumber.ToString() +")";
-      	if (nm.Instance.Description == "") 	nm.Instance.Description = "Virtual module of Rfm switch " + nextnumber.ToString();
-      
-      	nm.Parameter("Rfm.Node").Value = nextnumber.ToString();
-  		nm.Parameter("Rfm.Boardtype").Value = "MOTEINO";
-  		nm.Parameter("Rfm.Port").Value = "A" + nextnumber.ToString();
-  		nm.Parameter("Rfm.Duration").Value = "30";
-        nm.Parameter("Rfm.IconOn").Value = "pages/control/widgets/rfm/images/wifi_on.png";
-        nm.Parameter("Rfm.IconOff").Value = "pages/control/widgets/rfm/images/wifi_off.png";
-        nm.Parameter("Rfm.Enable").Value = "1";
-        
-      	logtext = string.Format("Virtual module added: Name:{4}, Node:{0}, Boardtype:{1}, Port:{2}, Duration:{3}", 
+    
+    for (int nextnumber = 1; nextnumber &lt;= number_modules; nextnumber++) {
+        // test if module with this address yet exists     	      
+      	if (RFM_MODULES.WithAddress(nextnumber.ToString()).Get().Instance == null){
+        	Program.AddVirtualModule(MODULES_DOMAIN, nextnumber.ToString(), "Switch", MODULES_WIDGET);
+          	var nm = RFM_MODULES.WithAddress(nextnumber.ToString()).Get();
+          	if (nm.Instance.Name == "") nm.Instance.Name = "Rfm Switch (" + nextnumber.ToString() +")";
+        	if (nm.Instance.Description == "") 	nm.Instance.Description = "Rfm module " + nextnumber.ToString();
+        	nm.Parameter("Rfm.Node").Value = nextnumber.ToString();
+            nm.Parameter("Rfm.Boardtype").Value = "MOTEINO";
+            nm.Parameter("Rfm.Port").Value = "A" + nextnumber.ToString();
+            nm.Parameter("Rfm.Duration").Value = "30";
+            nm.Parameter("Rfm.IconOn").Value = "pages/control/widgets/rfm/images/wifi_on.png";
+            nm.Parameter("Rfm.IconOff").Value = "pages/control/widgets/rfm/images/wifi_off.png";
+            nm.Parameter("Rfm.Enable").Value = "1";
+          	logtext = string.Format("Virtual module added: Name:{4}, Description: {5}, Node:{0}, Boardtype:{1}, Port:{2}, Duration:{3}", 
                   nm.Parameter("Rfm.Node").Value,
                   nm.Parameter("Rfm.Boardtype").Value,
                   nm.Parameter("Rfm.Port").Value,
   				  nm.Parameter("Rfm.Duration").Value,
-                  nm.Instance.Name);          	
-        Log(logtext);
-             
+                  nm.Instance.Name,
+                  nm.Instance.Description);          	
+        	Log(logtext);          
+        }            
     } 
   }
   if (curr_modules &gt; number_modules) { // Remove the too much modules in reverse order
@@ -858,7 +857,7 @@ while (Program.IsEnabled)
   <Description>Add virtual moddules of Arduino style RFM69HW transceiver board to be addressed by serial interface between HG (on Raspberry Pi or CubieTruck). 
 It could be used by wigdet driven control and directly using URL commands like
 'http://192.168.X.X/api/Rfm/11/A2/ON/30'</Description>
-  <Group>CubieTruck</Group>
+  <Group>Devices and Things</Group>
   <Features>
     <ProgramFeature>
       <FieldType>checkbox</FieldType>
@@ -875,8 +874,8 @@ It could be used by wigdet driven control and directly using URL commands like
       <Description>Simulate only</Description>
     </ProgramFeature>
   </Features>
-  <ActivationTime>2016-09-13T09:38:41.151761Z</ActivationTime>
-  <TriggerTime>2016-09-13T09:38:41.459243Z</TriggerTime>
+  <ActivationTime xsi:nil="true" />
+  <TriggerTime>2016-09-24T16:21:05.441541Z</TriggerTime>
   <Type>CSharp</Type>
   <IsEnabled>true</IsEnabled>
 </ProgramBlock>
