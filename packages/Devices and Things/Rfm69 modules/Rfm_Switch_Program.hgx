@@ -147,7 +147,7 @@ Action&lt;int&gt; InitVirtualModules = (int number_modules) =&gt; {
       	if (RFM_MODULES.WithAddress(nextnumber.ToString()).Get().Instance == null){
         	Program.AddVirtualModule(MODULES_DOMAIN, nextnumber.ToString(), "Switch", MODULES_WIDGET);
           	var nm = RFM_MODULES.WithAddress(nextnumber.ToString()).Get();
-          	if (nm.Instance.Name == "") nm.Instance.Name = "Rfm Switch (" + nextnumber.ToString() +")";
+          	if (nm.Instance.Name == "") nm.Instance.Name = "Rfm Switch";
         	if (nm.Instance.Description == "") 	nm.Instance.Description = "Rfm module " + nextnumber.ToString();
         	nm.Parameter("Rfm.Node").Value = nextnumber.ToString();
             nm.Parameter("Rfm.Boardtype").Value = "MOTEINO";
