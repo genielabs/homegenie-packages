@@ -1,0 +1,448 @@
+<?xml version="1.0" encoding="utf-16"?>
+<ProgramBlock xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <ConditionType>OnSwitchTrue</ConditionType>
+  <Conditions />
+  <Commands />
+  <ScriptCondition>Program
+  .AddOption("DeviceType", "Serial", "Device Type (Serial, Ethernet)", "text")
+  .AddOption("IPAddress", "127.0.0.1", "Ethernet IP address", "text")
+  .AddOption("TCPPort", "5003", "Ethernet Port", "text")
+  .AddOption("COMPort", "/dev/ttyUSB0", "Serial Port", "text")
+  .AddOption("BaudRate", "115200", "Serial Baud rate", "text")
+  .AddOption("InclusionMode", "True", "Inclusion Mode always on (True/False)", "text")
+  .AddOption("GroupSubDevices", "True", "Group Subdevices with ID &lt; 15 (True/False)", "text")  
+  .Run();</ScriptCondition>
+  <ScriptSource>const string _HG_DOMAIN = "HomeAutomation.MySensors";
+
+Func&lt;int&gt; GetNewNodeId = () =&gt; 
+{
+  int maxId = 0;
+
+  Modules.InDomain(_HG_DOMAIN).Each( (module) =&gt; {
+    string adr = module.Instance.Address;
+    if (adr.Contains("."))
+    {
+      adr = adr.Split('.')[0];
+    }
+    if (Convert.ToInt32(adr) &gt; maxId)
+    {
+      maxId = Convert.ToInt32(adr);
+    }
+    return false;
+  });
+  return maxId + 1;
+};
+
+string DeviceType = Program.Option("DeviceType").Value.ToLower();
+bool InclusionMode = Convert.ToBoolean(Program.Option("InclusionMode").Value.ToLower());
+bool GroupSubDevices = Convert.ToBoolean(Program.Option("GroupSubDevices").Value.ToLower());
+
+Action&lt;string&gt; 
+  HandleStringReceived = (string incoming) =&gt; {
+  // this will be called every time a message is received from serial port
+  //Program.Notify("TCP String", incoming);  Pause(5);
+
+  string[] message = incoming.Split(';');
+
+  if (message.Length == 6)
+  {
+    //Program.Notify("SerialPort String", incoming); Pause(0.5);
+    // node-id ; child-sensor-id ; message-type ; ack ; sub-type ; payload \n
+    int nodeId = Convert.ToInt32(message[0]);	
+    int childSensorId = Convert.ToInt32(message[1]);  	
+    int messageType = Convert.ToInt32(message[2]);
+    string ack = message[3];
+    int subType = Convert.ToInt32(message[4]);
+    string payload = message[5];
+
+    string parameterName = String.Format("ChildSensorId {0}", childSensorId);
+
+    // HomeGenie Address is [NodeId].[ChildeSensorId], for example 6.1    
+    string myNodeId = nodeId.ToString();
+    // If the deviceId is 15 or higher or GroupSubDevices is false, it has its own seperate widget
+    if (childSensorId &gt;= 15 || GroupSubDevices == false || subType == 4)
+    {
+      myNodeId = String.Format("{0}.{1}", nodeId, childSensorId);
+    }
+    // get the corresponding module
+    var module = Modules.InDomain(_HG_DOMAIN).WithAddress(myNodeId).Get();
+
+    // PRESENTATION
+    if (messageType == 0 &amp;&amp; InclusionMode) // Presentation
+    {
+      // CREATE MODULE
+      string hgType = string.Empty;
+      string hgWidget = string.Empty;
+      string parameterValue = string.Empty;
+
+      switch(subType){
+        case  0: // S_DOOR
+        hgType = "DoorWindow";          
+        hgWidget = "homegenie/generic/doorwindow";
+        parameterValue = "S_DOOR";
+        break; 
+        case  1: // S_MOTION   
+        hgType = "Sensor";          
+        hgWidget = "homegenie/generic/sensor";
+        parameterValue = "S_MOTION";
+        break;           
+        case 3: // S_LIGHT / S_BINARY
+        hgType = "Switch";          
+        hgWidget = "homegenie/generic/switch";
+        parameterValue = "S_BINARY";
+        break;
+        case 4: // ???
+        hgType = "Dimmer";          
+        hgWidget = "homegenie/generic/dimmer";
+        parameterValue = "S_DIMMER";
+        break;
+        case  6: // S_TEMP    
+        hgType = "Sensor";          
+        hgWidget = "homegenie/generic/sensor";
+        parameterValue = "S_TEMP";
+        break; 
+        case  7: // S_HUM
+        hgType = "Sensor";          
+        hgWidget = "homegenie/generic/sensor";
+        parameterValue = "S_HUM";
+        break; 
+        case 11: // S_UV
+        hgType = "Sensor";          
+        hgWidget = "homegenie/generic/sensor";
+        parameterValue = "S_UV";
+        break; 
+        case 13: // S_POWER
+        hgType = "Sensor";          
+        hgWidget = "homegenie/generic/sensor";
+        parameterValue = "S_POWER";
+        break; 
+        case 15: // S_DISTANCE
+        hgType = "Sensor";          
+        hgWidget = "homegenie/generic/sensor";
+        parameterValue = "S_DISTANCE";
+        break; 
+        case 16: // S_LIGHT_LEVEL
+        hgType = "Sensor";          
+        hgWidget = "homegenie/generic/sensor";
+        parameterValue = "S_LIGHT_LEVEL";
+        break; 
+        case 19: // S_LOCK
+        hgType = "DoorWindow";   
+        hgWidget = "homegenie/generic/doorlock";
+        parameterValue = "S_LOCK";
+        break;
+        case 20: // S_IR (Infrared device)
+        hgType = "Sensor";   
+        hgWidget = "homegenie/generic/sensor";
+        parameterValue = "S_IR";
+        break; 
+        case 21: // S_WATER
+        hgType = "Sensor";   
+        hgWidget = "homegenie/generic/sensor";
+        parameterValue = "S_WATER";
+        break;   
+        case 26: // S_RGB_LIGHT
+        hgType = "Dimmer";
+        hgWidget = "homegenie/generic/colorlight";
+        parameterValue = "S_RGB_LIGHT";
+        break; 
+        case 37: // S_GAS
+        hgType = "Sensor";   
+        hgWidget = "homegenie/generic/sensor";
+        parameterValue = "S_GAS";
+        break; 
+      }        
+      // Create module   
+      // domain:	Domain.
+      // address:	Address.
+      // type:    Generic, Program, Switch, Light, Dimmer, Sensor, Temperature, Siren, Fan, Thermostat, Shutter, DoorWindow, MediaTransmitter, MediaReceiver
+      // widget:	Empty string or the path of the widget to be associated to the virtual module.
+
+      if (module.Instance == null)
+      {
+        // Module doesn't exist, create it.
+        Program.AddVirtualModule(_HG_DOMAIN, myNodeId, hgType, hgWidget);
+        //Alert the user        
+        Program.Notify(_HG_DOMAIN, String.Format("Node added: {0} with Id {1}", hgType, myNodeId));  
+        // And get the newly created module
+        module = Modules.InDomain(_HG_DOMAIN).WithAddress(myNodeId).Get();
+      }
+
+      if (String.IsNullOrWhiteSpace(module.Instance.Name) &amp;&amp; !String.IsNullOrWhiteSpace(payload))
+      {
+        // Name given, add it to the widget
+        module.Instance.Name = payload;
+      }
+
+      // Add META data if not found
+      if (String.IsNullOrWhiteSpace(module.Parameter(parameterName).Value))
+      {
+        module.Parameter(parameterName).Value = parameterValue;
+      }
+    }
+    else if (messageType == 1) // Set
+    {      
+      Program.Notify("My String", incoming);Pause(1);
+      // Status.Level, Status.Battery, Sensor.Generic, Sensor.Temperature, Sensor.Luminance, Sensor.Humidity, 
+      // Sensor.DoorWindow, Sensor.MotionDetect, Sensor.Alarm, Sensor.CarbonMonoxide, Sensor.CarbonDioxide, 
+      // Sensor.Smoke, Sensor.Heat, Sensor.Flood, Sensor.Tamper, Meter.Watts      
+
+      string hgSubType = string.Empty;      
+      switch(subType){
+        case 0: // V_TEMP
+        hgSubType = "Sensor.Temperature";
+        break;
+        case 1: // V_HUM
+        hgSubType = "Sensor.Humidity";
+        break;       
+        case 2: // V_STATUS, V_LIGHT // Binary level
+        hgSubType = "Status.Level";
+        break;  
+        case 3: // V_DIMMER, V_PERCENTAGE
+        hgSubType = "Status.Level"; // status.percentage?
+        break;
+        case 4: // V_DIMMER, V_PERCENTAGE
+        hgSubType = "Status.Level"; // status.percentage?
+        break;
+        case 13: // V_DISTANCE
+        hgSubType = "Sensor.Distance";
+        break;           
+        case 16: // V_TRIPPED
+        // V_TRIPPED can relate to different Sensor types
+        switch(module.Parameter(parameterName).Value){
+          case "S_DOOR":
+          hgSubType = "Sensor.DoorWindow";
+          break;
+          case "S_MOTION":
+          hgSubType = "Sensor.MotionDetect";
+          break;
+          case "S_SMOKE":
+          hgSubType = "Sensor.Smoke";
+          break;
+          case "S_MOISTURE":
+          case "S_WATER_LEAK":
+          hgSubType = "Sensor.Flood";
+          break;
+        }
+        break;          
+        case 17: // V_WATT
+        hgSubType = "Meter.Watts";
+        break; 
+        case 18: // V_KWH
+        hgSubType = "Meter.KilowattHour";
+        break; 
+        case 23: // V_LIGHT_LEVEL : Uncalibrated light level. 0-100%. Use V_LEVEL for light level in lux.
+        hgSubType = "Sensor.Luminance";
+        break;
+        case 32: // V_IR_SEND
+        case 33: // V_IR_RECEIVE
+        hgSubType = "Sensor.InfraRed";
+        break;
+        case 34: // V_FLOW 
+        hgSubType = "Sensor.Flow";
+        break;
+        case 35: // V_VOLUME
+        hgSubType = "Sensor.Volume";
+        break;
+        case 36: // V_LOCK_STATUS
+        hgSubType = "Status.DoorLock";
+        if (payload == "0")
+          {payload = "Unsecured";}
+        else
+          {payload = "Secured";}
+        break;
+        case 37: // V_LEVEL
+        // V_LEVEL can relate to different Sensor types
+        switch(module.Parameter(parameterName).Value){
+          case "S_DUST":
+          case "S_AIR_QUALITY":
+          case "S_SOUND": // (dB)
+          case "S_VIBRATION": // (hz)
+          case "S_LIGHT_LEVEL": // Calibrated Light Level (Lumens)
+          hgSubType = "Sensor.Luminance";
+          break;
+        }
+        break;
+        case 39: //V_CURRENT 	Current level 	S_MULTIMETER
+        hgSubType = "Meter.Ampere";
+        break;
+        case 40: // V_RGB
+        hgSubType = "Status.ColorRgb";
+        break;  
+/*		case 54: // Reactive power: volt-ampere reactive (var) 	S_POWER
+        hgSubType = "Meter.Amper";
+        break;  
+		case 55: // Apparent power: volt-ampere (VA) 	S_POWER
+        hgSubType = "Meter.Amper";*/
+        break; 
+      }   
+      Program.RaiseEvent(module, hgSubType, payload, myNodeId + " - " + payload);
+    }
+    else if (messageType == 2) // Req
+    {
+      // TODO
+    }
+    else if (messageType == 3) // Internal
+    {
+      //Program.Notify("SerialPort Internal", incoming); Pause(0.5);
+      string hgSubType = string.Empty; 
+      switch(subType){
+        case 0: // I_BATTERY_LEVEL
+        hgSubType = "Status.Battery";
+        Program.RaiseEvent(module, hgSubType, payload, myNodeId + " - " + payload);
+        break;
+        case 3: // I_ID_REQUEST (eg. 255;255;3;0;3;)
+        // Get a new Id and send
+        TcpClient.SendMessage(String.Format("255;255;3;0;4;{0}\n", GetNewNodeId()));
+        break;
+        case 5: // I_INCLUSION_MODE
+        InclusionMode = (payload == "1"); // 1: On, 2: Off
+        break;
+      }  
+    }        
+  }
+};
+    
+Action&lt;bool&gt;
+  HandleStatusChanged = (bool connected) =&gt; {
+  // this will be called every time the connection status changes
+  Program.Notify(String.Format("MySensors {0} Gateway", Program.Option("DeviceType").Value), connected ? "CONNECTED!" : "DISCONNECTED!");
+};
+
+// CONNECTION
+switch(DeviceType){
+  case  "ethernet":
+  string IPAddress = Program.Option("IPAddress").Value;
+  int TCPPort = Convert.ToInt32(Program.Option("TCPPort").Value);
+
+  TcpClient
+    .Service(IPAddress)
+    .OnStatusChanged( HandleStatusChanged )
+    .OnStringReceived( HandleStringReceived )
+    .Connect( TCPPort ); 
+  break;
+  case "serial":
+  string comPort = Program.Option("COMPort").Value;
+  int baudRate = Convert.ToInt32(Program.Option("BaudRate").Value);
+
+  SerialPort
+    .WithName( comPort )
+    .OnStatusChanged( HandleStatusChanged )
+    .OnStringReceived( HandleStringReceived )
+    .Connect( baudRate );
+  break;
+  default:
+  Program.Notify("ERROR:", String.Format("Unknown device type: {0}", Program.Option("DeviceType").Value));
+  break;
+}
+// open the serial port channel and register handlers
+
+When.WebServiceCallReceived(_HG_DOMAIN, ( args ) =&gt; {
+  try
+  {
+    //Program.Notify("HomeAutomation.MySensors incoming", args.ToString()); Pause(1);
+    // EXAMPLE for Switch: HomeAutomation.MySensors/27.14/Control.On/undefined	
+
+    string[] reqs = ((string)args).Split('/');
+    //Program.Notify("0", reqs[0]); Pause(1);
+    //Program.Notify("1", reqs[1]); Pause(1);
+    //Program.Notify("2", reqs[2]); Pause(1);
+    //Program.Notify("3", reqs[3]); Pause(1);
+
+    // reqs[1] = ID (21 or 21.11)
+    // reqs[2] = Command (Control.On)
+    // reqs[3] = Value (can be null)
+    // reqs[4] = TIMESTAMP
+
+    //Needs to be converted to something like this "27;14;1;0;2;1\n"; nodeID, childSensorId, messageType, ack, subType, Payload 
+
+    var nodeId = reqs[1].Split('.')[0];
+    var childSensorId = reqs[1].Split('.')[1];
+    int subType = 0;
+    string setValue = "";  
+
+    var module = Modules.InDomain(_HG_DOMAIN).WithAddress(reqs[1]).Get();
+
+    if (module.IsOfDeviceType("Switch") || module.IsOfDeviceType("Dimmer"))
+    {
+      if (module.IsOfDeviceType("Switch")) {subType = 2;} //V_STATUS, V_LIGHT
+      if (module.IsOfDeviceType("Dimmer")) {subType = 3;} //V_DIMMER
+      
+      if (reqs[2] == "Control.Off")
+      { 
+        setValue = "0";
+      }
+      else if (reqs[2] == "Control.On")
+      {
+      	if (module.IsOfDeviceType("Switch")) {setValue = "1";} //V_STATUS, V_LIGHT
+      	if (module.IsOfDeviceType("Dimmer")) {setValue = "100";} //V_DIMMER
+      }
+      else if (reqs[2] == "Control.Toggle")
+      {
+        double level = module.Parameter("Status.Level").DecimalValue;
+        if (level &gt; 0)
+        {setValue = "0";}
+        else
+        {
+          if (module.IsOfDeviceType("Switch")) {setValue = "1";} //V_STATUS, V_LIGHT
+	      if (module.IsOfDeviceType("Dimmer")) {setValue = "100";} //V_DIMMER
+        }
+      }
+      else if (reqs[2] == "Control.Level")
+      {
+        //Program.Notify("Control.Level from HG", reqs[3].ToString()); Pause(1); /////
+        setValue = reqs[3].ToString(); /////
+        //setValue = (100 * Convert.ToInt32(reqs[3])).ToString();
+      } 
+      else if (reqs[2] == "Control.ColorRgb")
+      {
+        subType = 40; // V_RGB
+        setValue = reqs[3].ToString();
+      }       
+    }
+
+    //string testCommand = "27;14;1;0;2;1\n";
+    string theCommand = String.Format("{0};{1};{2};{3};{4};{5}\n", nodeId, childSensorId, "1", "0", subType, setValue);
+
+    // send the message
+    //Program.Notify("MySensors Info", theCommand);Pause(1);
+    switch(DeviceType){
+      case  "ethernet":
+        TcpClient.SendMessage(theCommand);
+        break;
+      case "serial":
+        SerialPort.SendMessage(theCommand);
+        break;
+     }
+    // update
+    if (reqs[2] == "Control.Level")
+    {
+      //theCommand = (double.Parse(theCommand)/100).ToString();
+      setValue = (double.Parse(setValue)/100).ToString();
+    }
+    Program.RaiseEvent(module, "Status.Level", setValue, setValue);
+    //Program.RaiseEvent(module, "Status.Level", (double.Parse(setValue)/100).ToString(), (double.Parse(setValue)/100).ToString());
+    return "{ 'ResponseValue' : 'OK' }"; 
+    
+  } catch (Exception e) {
+    Program.Notify("HomeAutomation.MySensors ERROR!", e.Message);
+    Pause(2);
+    Program.Notify("HomeAutomation.MySensors ERROR!", args.ToString());
+    return "{ 'ResponseValue' : 'OK' }"; 
+  }
+});
+Program.GoBackground();</ScriptSource>
+  <ScriptErrors>[]</ScriptErrors>
+  <Domain>HomeAutomation.HomeGenie.Automation</Domain>
+  <Address>1000</Address>
+  <Name>MySensors Gateway</Name>
+  <Description>MySensors Gateway. (Supports both Serial and Ethernet Gateways)
+
+See https://www.mysensors.org/ for more information.</Description>
+  <Group>test</Group>
+  <Features />
+  <ActivationTime>2016-11-09T20:32:58.506504Z</ActivationTime>
+  <TriggerTime>2016-11-09T20:33:02.325355Z</TriggerTime>
+  <Type>CSharp</Type>
+  <IsEnabled>true</IsEnabled>
+</ProgramBlock>
