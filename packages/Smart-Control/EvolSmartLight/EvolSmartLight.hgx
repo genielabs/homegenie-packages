@@ -31,10 +31,8 @@ var PAUSE_LOOP = Program.InputField("HomeGenie.SmartLights.PauseLoop").DecimalVa
 var TIMER_ONN = "HomeGenie.SmartLights.TimerOnN";
 var MOTION_OR_NOT = "HomeGenie.SmartLights.MotionOrNot";
 var smart_devices = Modules.WithFeature(SMART_LIGHT_ENABLE);
-//When.ModuleParameterIsChanging((module, parameter) =&gt; {
 When.ModuleParameterChanged((module, parameter) =&gt; {
 var SWITCHH = Modules.InDomain("HomeAutomation.MySmartLight").WithAddress("1").Get().Parameter("Status.Level").Value;
-//if (Modules.InDomain("HomeAutomation.MySmartLight").WithAddress("1").Get().Parameter("Status.Level").Value == "100") {
   	if (module.IsOfDeviceType("Sensor"))
     {
       	if (parameter.Name == "Sensor.MotionDetect" || parameter.Name == "Status.Level")
@@ -44,7 +42,6 @@ var SWITCHH = Modules.InDomain("HomeAutomation.MySmartLight").WithAddress("1").G
             { 
                 smart_devices.Each((mod)=&gt;
                 {
-	              	//mod.Parameter(MOTION_OR_NOT).Value = "TRUE";
                     if (mod.Parameter(MOT_SENSOR_NAME).Value == module.Instance.Name)
                     {
                       	mod.Parameter(MOTION_OR_NOT).Value = "TRUE";
@@ -56,14 +53,10 @@ var SWITCHH = Modules.InDomain("HomeAutomation.MySmartLight").WithAddress("1").G
                             if (lumsensor.Instance != null)
                             {
                                 var luminosity = lumsensor.Parameter("Sensor.Luminance").DecimalValue;
-                              	//if (luminosity &lt; mod.Parameter(LUM_TRIGGER).DecimalValue &amp;&amp; )
                               	if ((luminosity &lt; mod.Parameter(LUM_TRIGGER).DecimalValue) &amp;&amp; SWITCHH == "100") 
                                 {
 		                            Program.Notify("Smart Lights", module.Instance.Name + "&lt;br&gt;switched ON " + mod.Instance.Address + " " + mod.Instance.Name);
                                     mod.On();
-                                  //////// test bandeau led ////
-                                  //Net.WebService("http://10.0.0.114/core/api/jeeApi.php?apikey=QMCDhemEllYX1rhx3E95nU1QhFnF96Rxq4Rq8VLAYB8xJFLj&amp;type=cmd&amp;id=79&amp;slider=100");
-                                  /////////////////////////////
                                 }
                             }
                             else	
@@ -71,13 +64,9 @@ var SWITCHH = Modules.InDomain("HomeAutomation.MySmartLight").WithAddress("1").G
                                 if (SWITCHH == "100") {
                                   mod.On();
                                 }
-                                  //////// test bandeau led ////
-                                  //Net.WebService("http://10.0.0.114/core/api/jeeApi.php?apikey=QMCDhemEllYX1rhx3E95nU1QhFnF96Rxq4Rq8VLAYB8xJFLj&amp;type=cmd&amp;id=79&amp;slider=100");
-                                  /////////////////////////////
                             }
                         }
                     }
-                  	//
 	              	return false;
                 });
             }
@@ -86,7 +75,6 @@ var SWITCHH = Modules.InDomain("HomeAutomation.MySmartLight").WithAddress("1").G
                 // timeout before turning it off
 				smart_devices.Each((mod)=&gt;
                 {
-                  	//mod.Parameter(MOTION_OR_NOT).Value = "FALSE";
                     if (mod.Parameter(MOT_SENSOR_NAME).Value == module.Instance.Name)
                     {
 						mod.Parameter(MOTION_OR_NOT).Value = "FALSE";
@@ -102,49 +90,35 @@ var SWITCHH = Modules.InDomain("HomeAutomation.MySmartLight").WithAddress("1").G
       		var luminosity = module.Parameter("Sensor.Luminance").DecimalValue;
             smart_devices.Each((mod)=&gt;
             {
-            	//if (mod.Parameter(LUM_SENSOR_NAME).Value == module.Instance.Name &amp;&amp; mod.Level &gt; 0)
               	if (mod.Parameter(LUM_SENSOR_NAME).Value == module.Instance.Name)
 				{
                   if ( mod.Level &gt; 0) {//
-                    //if (luminosity &gt;= mod.Parameter(LUM_TRIGGER).DecimalValue)
-                    //if ( luminosity &gt;= mod.Parameter(LUM_TRIGGER).DecimalValue +  mod.Parameter(LUM_OFFSET).DecimalValue ) 
                     if ((luminosity &gt;= mod.Parameter(LUM_TRIGGER).DecimalValue +  mod.Parameter(LUM_OFFSET).DecimalValue) ) 
-                      // "mod.Parameter(LUM_OFFSET).DecimalValue"" pour prendre en compte la modification de luminosit?? li?? ?? l'allumage de la lampe et donc ??viter les bago ??teint-allum??
                     {
                       if ( SWITCHH == "100" ) {
                         Program.Notify("Smart Lights", module.Instance.Name + "&lt;br&gt;switched OFF " + mod.Instance.Address + " " + mod.Instance.Name);
                       	mod.Off();
                       }
                         mod.Parameter(LUM_BOOL).Value = "FALSE";
-                                  //////// test bandeau led ////
-                                  //Net.WebService("http://10.0.0.114/core/api/jeeApi.php?apikey=QMCDhemEllYX1rhx3E95nU1QhFnF96Rxq4Rq8VLAYB8xJFLj&amp;type=cmd&amp;id=79&amp;slider=0");
-                                  /////////////////////////////
                     }
                   }//
                   else	
                     {
-                      	//if ( mod.Parameter(TIMER_ONN).Value == "TRUE" &amp;&amp; mod.Parameter(MOTION_OR_NOT).Value == "TRUE" &amp;&amp; luminosity &lt; mod.Parameter(LUM_TRIGGER).DecimalValue) {
-                     	//if ( mod.Parameter(MOTION_OR_NOT).Value == "TRUE" &amp;&amp; luminosity &lt; mod.Parameter(LUM_TRIGGER).DecimalValue ) {
                         if ( (mod.Parameter(MOTION_OR_NOT).Value == "TRUE" &amp;&amp; luminosity &lt; mod.Parameter(LUM_TRIGGER).DecimalValue ) ) {
 		                  if ( SWITCHH == "100" ) {
                           	Program.Notify("Smart Lights", module.Instance.Name + "&lt;br&gt;switched ON " + mod.Instance.Address + " " + mod.Instance.Name);
                           	mod.On();
                           }
                           mod.Parameter(LUM_BOOL).Value = "TRUE"; 
-                                  //////// test bandeau led ////
-                                  //Net.WebService("http://10.0.0.114/core/api/jeeApi.php?apikey=QMCDhemEllYX1rhx3E95nU1QhFnF96Rxq4Rq8VLAYB8xJFLj&amp;type=cmd&amp;id=79&amp;slider=100");
-                                  /////////////////////////////
-                        }
+			}
                     }
                 }
               	return false;
 			});
 		}
     }
-//}
     return true;
 });
-//
 When.WebServiceCallReceived("HomeAutomation.MySmartLight", (args) =&gt; {
     string[] reqs = ((string)args).Split('/');
   	string responseString = ""; 
@@ -152,9 +126,7 @@ When.WebServiceCallReceived("HomeAutomation.MySmartLight", (args) =&gt; {
     {
       string switchnumber = reqs[1];
       string command = reqs[2];
-      
-      var virtualMod = Modules.InDomain("HomeAutomation.MySmartLight").WithAddress(switchnumber).Get();
-      
+      var virtualMod = Modules.InDomain("HomeAutomation.MySmartLight").WithAddress(switchnumber).Get();   
       switch(command)
       {
             case "Control.On":
@@ -162,11 +134,6 @@ When.WebServiceCallReceived("HomeAutomation.MySmartLight", (args) =&gt; {
         		smart_devices.Each((mod)=&gt;
                 {
 					mod.Parameter(TIMER_ONN).Value = "TRUE";
-                  	//mod.Parameter(MOTION_OR_NOT).Value = "FALSE"
-                    //mod.Off();
-                                  //////// test bandeau led ////
-                                  //Net.WebService("http://10.0.0.114/core/api/jeeApi.php?apikey=QMCDhemEllYX1rhx3E95nU1QhFnF96Rxq4Rq8VLAYB8xJFLj&amp;type=cmd&amp;id=79&amp;slider=0");
-                                  /////////////////////////////
               		return false;
                 });
                 break;
@@ -174,12 +141,8 @@ When.WebServiceCallReceived("HomeAutomation.MySmartLight", (args) =&gt; {
                 Program.RaiseEvent(virtualMod,"Status.Level","0","MySmartLight");
         		smart_devices.Each((mod)=&gt;
                 {
-					mod.Parameter(TIMER_ONN).Value = "FALSE";
-                  	//mod.Parameter(MOTION_OR_NOT).Value = "FALSE"
-                    mod.Off();
-                                  //////// test bandeau led ////
-                                  //Net.WebService("http://10.0.0.114/core/api/jeeApi.php?apikey=QMCDhemEllYX1rhx3E95nU1QhFnF96Rxq4Rq8VLAYB8xJFLj&amp;type=cmd&amp;id=79&amp;slider=0");
-                                  /////////////////////////////
+			mod.Parameter(TIMER_ONN).Value = "FALSE";
+                    	mod.Off();
               		return false;
                 });
                 break;
@@ -195,7 +158,6 @@ When.WebServiceCallReceived("HomeAutomation.MySmartLight", (args) =&gt; {
 });
 while (Program.IsEnabled)
 {
-    //if (Modules.InDomain("HomeAutomation.MySmartLight").WithAddress("1").Get().Parameter("Status.Level").Value == "100") {
     var SWITCHH = Modules.InDomain("HomeAutomation.MySmartLight").WithAddress("1").Get().Parameter("Status.Level").Value;
 	smart_devices.Each((mod)=&gt;
 	{
@@ -206,31 +168,19 @@ while (Program.IsEnabled)
         var elapsed = new TimeSpan(DateTime.UtcNow.Ticks - checktime);
       	if (mod.IsOn &amp;&amp; mod.Parameter(TIMER_ONN).Value == "TRUE")
         {
-//            var lastevent = mod.Parameter(LAST_EVENT).UpdateTime;
-          	// test sans pour ??viter le "zwave level poll" effect
-          	//var lastupdate = mod.Parameter("Status.Level").UpdateTime;
-//          	var checktime = lastevent.Ticks;
-          	//if (checktime &lt; lastupdate.Ticks) checktime = lastupdate.Ticks;
-//            var elapsed = new TimeSpan(DateTime.UtcNow.Ticks - checktime);
-          	if (elapsed.TotalSeconds &gt; timeout) {
-                
+		if (elapsed.TotalSeconds &gt; timeout) {
             	if( SWITCHH == "100" ) {
                   Program.Notify("Smart Lights", mod.Instance.Address + " " + mod.Instance.Name + "&lt;br&gt;switched OFF.");
                   mod.Off();
                 }
-                                  //////// test bandeau led ////
-                                  //Net.WebService("http://10.0.0.114/core/api/jeeApi.php?apikey=QMCDhemEllYX1rhx3E95nU1QhFnF96Rxq4Rq8VLAYB8xJFLj&amp;type=cmd&amp;id=79&amp;slider=0");
-                                  /////////////////////////////
               	mod.Parameter(TIMER_ONN).Value = "FALSE";
             }
         }
         if ( mod.IsOff &amp;&amp; mod.Parameter(TIMER_ONN).Value == "TRUE" &amp;&amp; SWITCHH == "100" &amp;&amp; elapsed.TotalSeconds &lt;= timeout &amp;&amp; mod.Parameter(LUM_BOOL).Value == "TRUE") { 
-          // &amp;&amp; mod.Parameter(LUM_BOOL).Value == "TRUE"
           mod.On();
         }
       	return false;
 	});
-    //}
   	Pause(PAUSE_LOOP);
 }</ScriptSource>
   <ScriptErrors>[]</ScriptErrors>
