@@ -26,13 +26,13 @@ var TURNOFF_TIMEOUT = "HomeGenie.SmartLights.SwitchOffTimeout";
 var LAST_EVENT = "HomeGenie.SmartLights.LastEvent";
 var LUM_TRIGGER = "HomeGenie.SmartLights.Luminance";
 var LUM_OFFSET = "HomeGenie.SmartLights.LuminanceOffSet";
+var LUM_BOOL = "HomeGenie.SmartLights.LuminanceBool";
 var PAUSE_LOOP = Program.InputField("HomeGenie.SmartLights.PauseLoop").DecimalValue;
 var TIMER_ONN = "HomeGenie.SmartLights.TimerOnN";
 var MOTION_OR_NOT = "HomeGenie.SmartLights.MotionOrNot";
 var smart_devices = Modules.WithFeature(SMART_LIGHT_ENABLE);
-//When.ModuleParameterIsChanging((module, parameter) =&gt; {
 When.ModuleParameterChanged((module, parameter) =&gt; {
-if (Modules.InDomain("HomeAutomation.MySmartLight").WithAddress("1").Get().Parameter("Status.Level").Value == "100") {
+var SWITCHH = Modules.InDomain("HomeAutomation.MySmartLight").WithAddress("1").Get().Parameter("Status.Level").Value;
   	if (module.IsOfDeviceType("Sensor"))
     {
       	if (parameter.Name == "Sensor.MotionDetect" || parameter.Name == "Status.Level")
@@ -42,7 +42,6 @@ if (Modules.InDomain("HomeAutomation.MySmartLight").WithAddress("1").Get().Param
             { 
                 smart_devices.Each((mod)=&gt;
                 {
-	              	//mod.Parameter(MOTION_OR_NOT).Value = "TRUE";
                     if (mod.Parameter(MOT_SENSOR_NAME).Value == module.Instance.Name)
                     {
                       	mod.Parameter(MOTION_OR_NOT).Value = "TRUE";
@@ -54,7 +53,7 @@ if (Modules.InDomain("HomeAutomation.MySmartLight").WithAddress("1").Get().Param
                             if (lumsensor.Instance != null)
                             {
                                 var luminosity = lumsensor.Parameter("Sensor.Luminance").DecimalValue;
-                              	if (luminosity &lt; mod.Parameter(LUM_TRIGGER).DecimalValue)
+                              	if ((luminosity &lt; mod.Parameter(LUM_TRIGGER).DecimalValue) &amp;&amp; SWITCHH == "100") 
                                 {
 		                            Program.Notify("Smart Lights", module.Instance.Name + "&lt;br&gt;switched ON " + mod.Instance.Address + " " + mod.Instance.Name);
                                     mod.On();
@@ -62,11 +61,12 @@ if (Modules.InDomain("HomeAutomation.MySmartLight").WithAddress("1").Get().Param
                             }
                             else	
                             {
-                                mod.On();
+                                if (SWITCHH == "100") {
+                                  mod.On();
+                                }
                             }
                         }
                     }
-                  	//
 	              	return false;
                 });
             }
@@ -75,7 +75,6 @@ if (Modules.InDomain("HomeAutomation.MySmartLight").WithAddress("1").Get().Param
                 // timeout before turning it off
 				smart_devices.Each((mod)=&gt;
                 {
-                  	//mod.Parameter(MOTION_OR_NOT).Value = "FALSE";
                     if (mod.Parameter(MOT_SENSOR_NAME).Value == module.Instance.Name)
                     {
 						mod.Parameter(MOTION_OR_NOT).Value = "FALSE";
@@ -91,35 +90,35 @@ if (Modules.InDomain("HomeAutomation.MySmartLight").WithAddress("1").Get().Param
       		var luminosity = module.Parameter("Sensor.Luminance").DecimalValue;
             smart_devices.Each((mod)=&gt;
             {
-            	//if (mod.Parameter(LUM_SENSOR_NAME).Value == module.Instance.Name &amp;&amp; mod.Level &gt; 0)
               	if (mod.Parameter(LUM_SENSOR_NAME).Value == module.Instance.Name)
 				{
                   if ( mod.Level &gt; 0) {//
-                    //if (luminosity &gt;= mod.Parameter(LUM_TRIGGER).DecimalValue)
-                    if (luminosity &gt;= mod.Parameter(LUM_TRIGGER).DecimalValue +  mod.Parameter(LUM_OFFSET).DecimalValue) 
-                      // "mod.Parameter(LUM_OFFSET).DecimalValue"" pour prendre en compte la modification de luminosit? li? ? l'allumage de la lampe et donc ?viter les bago ?teint-allum?
+                    if ((luminosity &gt;= mod.Parameter(LUM_TRIGGER).DecimalValue +  mod.Parameter(LUM_OFFSET).DecimalValue) ) 
                     {
+                      if ( SWITCHH == "100" ) {
                         Program.Notify("Smart Lights", module.Instance.Name + "&lt;br&gt;switched OFF " + mod.Instance.Address + " " + mod.Instance.Name);
                       	mod.Off();
+                      }
+                        mod.Parameter(LUM_BOOL).Value = "FALSE";
                     }
                   }//
-                   else	
+                  else	
                     {
-                      	//if ( mod.Parameter(TIMER_ONN).Value == "TRUE" &amp;&amp; mod.Parameter(MOTION_OR_NOT).Value == "TRUE" &amp;&amp; luminosity &lt; mod.Parameter(LUM_TRIGGER).DecimalValue) {
-                     	if ( mod.Parameter(MOTION_OR_NOT).Value == "TRUE" &amp;&amp; luminosity &lt; mod.Parameter(LUM_TRIGGER).DecimalValue) {
-		                  Program.Notify("Smart Lights", module.Instance.Name + "&lt;br&gt;switched ON " + mod.Instance.Address + " " + mod.Instance.Name);
-                          mod.On();
-                        }
+                        if ( (mod.Parameter(MOTION_OR_NOT).Value == "TRUE" &amp;&amp; luminosity &lt; mod.Parameter(LUM_TRIGGER).DecimalValue ) ) {
+		                  if ( SWITCHH == "100" ) {
+                          	Program.Notify("Smart Lights", module.Instance.Name + "&lt;br&gt;switched ON " + mod.Instance.Address + " " + mod.Instance.Name);
+                          	mod.On();
+                          }
+                          mod.Parameter(LUM_BOOL).Value = "TRUE"; 
+			}
                     }
-				}
+                }
               	return false;
 			});
 		}
     }
-}
     return true;
 });
-//
 When.WebServiceCallReceived("HomeAutomation.MySmartLight", (args) =&gt; {
     string[] reqs = ((string)args).Split('/');
   	string responseString = ""; 
@@ -127,21 +126,23 @@ When.WebServiceCallReceived("HomeAutomation.MySmartLight", (args) =&gt; {
     {
       string switchnumber = reqs[1];
       string command = reqs[2];
-      
-      var virtualMod = Modules.InDomain("HomeAutomation.MySmartLight").WithAddress(switchnumber).Get();
-      
+      var virtualMod = Modules.InDomain("HomeAutomation.MySmartLight").WithAddress(switchnumber).Get();   
       switch(command)
       {
             case "Control.On":
                 Program.RaiseEvent(virtualMod,"Status.Level","100","MySmartLight");
+        		smart_devices.Each((mod)=&gt;
+                {
+					mod.Parameter(TIMER_ONN).Value = "TRUE";
+              		return false;
+                });
                 break;
             case "Control.Off":
                 Program.RaiseEvent(virtualMod,"Status.Level","0","MySmartLight");
         		smart_devices.Each((mod)=&gt;
                 {
-					mod.Parameter(TIMER_ONN).Value = "FALSE";
-                  	//mod.Parameter(MOTION_OR_NOT).Value = "FALSE"
-                  	mod.Off();
+			mod.Parameter(TIMER_ONN).Value = "FALSE";
+                    	mod.Off();
               		return false;
                 });
                 break;
@@ -157,32 +158,34 @@ When.WebServiceCallReceived("HomeAutomation.MySmartLight", (args) =&gt; {
 });
 while (Program.IsEnabled)
 {
-    if (Modules.InDomain("HomeAutomation.MySmartLight").WithAddress("1").Get().Parameter("Status.Level").Value == "100") {
+    var SWITCHH = Modules.InDomain("HomeAutomation.MySmartLight").WithAddress("1").Get().Parameter("Status.Level").Value;
 	smart_devices.Each((mod)=&gt;
 	{
       	var timeout = mod.Parameter(TURNOFF_TIMEOUT).DecimalValue;
       	if (timeout == 0) timeout = 120; // default timeout is 2 minutes
+        var lastevent = mod.Parameter(LAST_EVENT).UpdateTime;
+        var checktime = lastevent.Ticks;
+        var elapsed = new TimeSpan(DateTime.UtcNow.Ticks - checktime);
       	if (mod.IsOn &amp;&amp; mod.Parameter(TIMER_ONN).Value == "TRUE")
         {
-            var lastevent = mod.Parameter(LAST_EVENT).UpdateTime;
-          	var lastupdate = mod.Parameter("Status.Level").UpdateTime;
-          	var checktime = lastevent.Ticks;
-          	if (checktime &lt; lastupdate.Ticks) checktime = lastupdate.Ticks;
-            var elapsed = new TimeSpan(DateTime.UtcNow.Ticks - checktime);
-          	if (elapsed.TotalSeconds &gt; timeout) {
-                Program.Notify("Smart Lights", mod.Instance.Address + " " + mod.Instance.Name + "&lt;br&gt;switched OFF.");
-            	mod.Off();
+		if (elapsed.TotalSeconds &gt; timeout) {
+            	if( SWITCHH == "100" ) {
+                  Program.Notify("Smart Lights", mod.Instance.Address + " " + mod.Instance.Name + "&lt;br&gt;switched OFF.");
+                  mod.Off();
+                }
               	mod.Parameter(TIMER_ONN).Value = "FALSE";
             }
         }
+        if ( mod.IsOff &amp;&amp; mod.Parameter(TIMER_ONN).Value == "TRUE" &amp;&amp; SWITCHH == "100" &amp;&amp; elapsed.TotalSeconds &lt;= timeout &amp;&amp; mod.Parameter(LUM_BOOL).Value == "TRUE") { 
+          mod.On();
+        }
       	return false;
 	});
-    }
   	Pause(PAUSE_LOOP);
 }</ScriptSource>
   <ScriptErrors>[]</ScriptErrors>
   <Domain>HomeAutomation.HomeGenie.Automation</Domain>
-  <Address>101001</Address>
+  <Address>1037</Address>
   <Name>My Smart Lights</Name>
   <Description>Control device by motion detection and enviroment light. </Description>
   <Group>MyScripts</Group>
@@ -230,8 +233,8 @@ while (Program.IsEnabled)
       <Description>Luminance offset</Description>
     </ProgramFeature>
   </Features>
-  <ActivationTime>2015-05-22T18:34:50.32538Z</ActivationTime>
-  <TriggerTime>2015-05-22T18:34:50.634437Z</TriggerTime>
+  <ActivationTime>2017-04-23T07:21:38.154285Z</ActivationTime>
+  <TriggerTime>2017-04-23T07:21:38.72382Z</TriggerTime>
   <Type>CSharp</Type>
   <IsEnabled>true</IsEnabled>
 </ProgramBlock>
