@@ -1,0 +1,46 @@
+{
+    "author": "Eric Sauve (saue0)",
+    "version": "v1.0",
+    "title": "Nest Integration",
+    "description": "Adds Nest control capability to HomeGenie",
+    "published": "2017-05-20T00:00:00Z",
+    "sourcecode": "",
+    "homepage": "", 
+    "widgets": [
+        { 
+            "file": "erx_nest_login.zip",
+            "name":"Nest Logging",
+            "description": "Widget for controlling Nest Loggin"
+        },
+        { 
+            "file": "erx_nest_protect.zip",
+            "name":"Nest Protect",
+            "description": "Widget for controlling Fibaro RGBWM-441"
+        }
+        { 
+            "file": "erx_nest_structure.zip",
+            "name":"Nest Structure",
+            "description": "Widget for controlling Nest Structure/Away"
+        },
+        { 
+            "file": "erx_nest_thermostat.zip",
+            "name":"Nest Thermostat",
+            "description": "Widget for controlling Nest Thermostat"
+        },
+        { 
+            "file": "erx_nest_camera.zip",
+            "name":"Nest Camera",
+            "description": "Widget for controlling Nest Camera"
+        }
+    ],
+    "programs": [
+        { 
+            "file": "Nest Control.hgx",
+            "name":"Nest Control",
+            "description": "Nest Control driver app",
+            "uid": "100201",
+            "group": "nest" 
+        }
+    ],
+    "interfaces": [ ]
+}
