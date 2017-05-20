@@ -10,12 +10,12 @@
         { 
             "file": "erx_nest_login.zip",
             "name":"Nest Logging",
-            "description": "Widget for controlling Nest Loggin"
+            "description": "Widget for Nest Login Authorization"
         },
         { 
             "file": "erx_nest_protect.zip",
             "name":"Nest Protect",
-            "description": "Widget for controlling Fibaro RGBWM-441"
+            "description": "Widget for controlling Nest Protect"
         },
         { 
             "file": "erx_nest_structure.zip",
@@ -35,7 +35,7 @@
     ],
     "programs": [
         { 
-            "file": "Nest Control.hgx",
+            "file": "Nest_Control.hgx",
             "name":"Nest Control",
             "description": "Nest Control driver app",
             "uid": "100201",
