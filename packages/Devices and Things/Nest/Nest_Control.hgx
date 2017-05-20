@@ -5,7 +5,7 @@
   <Commands />
   <ScriptCondition>Program.Setup(()=&gt;{
 
-    Program.UseWidget("erx/nest/nest");
+    Program.UseWidget("erx/nest/login");
 
    	Program.AddOption("NestClientID","", "Nest Client ID", "text");
    	Program.AddOption("NestClientSecret","", "Nest Client Secret", "text");

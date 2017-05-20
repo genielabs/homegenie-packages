@@ -16,7 +16,7 @@
             "file": "erx_nest_protect.zip",
             "name":"Nest Protect",
             "description": "Widget for controlling Fibaro RGBWM-441"
-        }
+        },
         { 
             "file": "erx_nest_structure.zip",
             "name":"Nest Structure",
