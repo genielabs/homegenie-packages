@@ -7,24 +7,34 @@
 
     Program.UseWidget("erx/nest/login");
 
-   	Program.AddOption("NestClientID","", "Nest Client ID", "text");
-   	Program.AddOption("NestClientSecret","", "Nest Client Secret", "text");
-   	Program.AddOption("NestToken","", "Nest Token", "text");
+   	Program.AddOption("NestClientID","", "Product ID", "text");
+   	Program.AddOption("NestClientSecret","", "Product Secret", "text");
+  	Program.AddOption("NestToken","", "Token", "password");
+    Program.AddOption("StructureCount","1","Number of Structure", "slider:1:15:1");
+    Program.AddOption("ThermostatCount","1","Number of Thermostat", "slider:1:15:1");
+    Program.AddOption("ProtectCount","1","Number of Protect", "slider:1:15:1");
+    Program.AddOption("CameraCount","1","Number of Camera", "slider:1:15:1");
+    Program.AddOption("UsePin","1","Product Use Pin", "checkbox");
+  
 
+    Program.AddVirtualModules("HomeAutomation.NestStructure", "Sensor", "erx/nest/structure"
+                              ,1,(int)Program.Option("StructureCount").DecimalValue);
+    Program.AddVirtualModules("HomeAutomation.NestProtect", "Sensor", "erx/nest/protect"
+                              ,1,(int)Program.Option("ProtectCount").DecimalValue);
+    Program.AddVirtualModules("HomeAutomation.NestThermostat", "Thermostat", "erx/nest/thermostat"
+                              ,1,(int)Program.Option("ThermostatCount").DecimalValue);
+    Program.AddVirtualModules("HomeAutomation.NestCamera", "Sensor", "erx/nest/camera"
+                              ,1,(int)Program.Option("CameraCount").DecimalValue);
 
-    //Program.AddFeature("HomeAutomation.NestCamera", "Sensor", "IpCamera.ImageURL", "Camera image API URL (see your camera docs)", "text");
-    //Program.AddFeature("HomeAutomation.NestCamera", "Sensor", "IpCamera.Username", "Username (optional)", "text");
-    //Program.AddFeature("HomeAutomation.NestCamera", "Sensor", "IpCamera.Password", "Password (optional)", "password");
- 
 });
 
 return true;</ScriptCondition>
   <ScriptSource>const string MODULES_DOMAIN_STRUCTURE  = "HomeAutomation.NestStructure";
 const string MODULES_DOMAIN_THERMOSTAT = "HomeAutomation.NestThermostat";
-const string MODULES_DOMAIN_PROTECT = "HomeAutomation.NestProtect";
-const string MODULES_DOMAIN_CAMERA = "HomeAutomation.NestCamera";
-const string MODULES_DOMAIN_CONFIG = "HomeAutomation.NestConfig";
-const string EVENT_DESCRIPTION = "Nest Thermostat";
+const string MODULES_DOMAIN_PROTECT    = "HomeAutomation.NestProtect";
+const string MODULES_DOMAIN_CAMERA     = "HomeAutomation.NestCamera";
+const string MODULES_DOMAIN_CONFIG     = "HomeAutomation.NestConfig";
+const string EVENT_DESCRIPTION         = "Nest Thermostat";
 
 const string URLAUTH    = "https://home.nest.com/login/oauth2?client_id={0}&amp;state={1}";
 const string NESTURL    = "https://developer-api.nest.com?auth={0}";
@@ -33,8 +43,18 @@ const string URLTOKEN   = "https://api.home.nest.com/oauth2/access_token";
 
 const string DATATOKEN  = "code={0}&amp;client_id={1}&amp;client_secret={2}&amp;grant_type=authorization_code";
 
-String AuthState = "";
-bool NeedSetup = true;
+Program.Parameter("NestState").Value = "";
+Program.Parameter("NestAuthUrl").Value = URLAUTH;
+Program.Parameter("NestConnect").Value = "Not Connected";
+
+
+Func&lt;string, bool&gt; SetConnectionState = (aState) =&gt; {
+  if (aState != Program.Parameter("NestConnect").Value) {
+	Program.Parameter("NestConnect").Value = aState;
+	Program.RaiseEvent("NestConnection", aState, EVENT_DESCRIPTION);   	
+  }
+  return true;
+};
 
 Func&lt;string, string, dynamic , string, string&gt; NestUpdate = (string Device, string Path, dynamic  Value, string Type) =&gt; {
 
@@ -70,7 +90,6 @@ Func&lt;ModuleHelper, JToken, JToken, bool&gt; refreshThermostat = (thermostat, 
     thermostat.Parameter("Thermostat.ThermostatId").Value = thermodata["device_id"].ToString();
     thermostat.Instance.Name = nestdata["structures"][thermodata["structure_id"].ToString()]["name"].ToString() +
         " - " + thermodata["label"].ToString();
-//        " - " + nestdata["structures"][thermodata["structure_id"].ToString()]["wheres"][thermodata["where_id"].ToString()]["name"].ToString();
 
     // State
 	switch (thermodata["hvac_state"].ToString()) {
@@ -203,7 +222,6 @@ When.WebServiceCallReceived(MODULES_DOMAIN_THERMOSTAT,( args ) =&gt; {
           		break;
           
           	case "Thermostat.FanModeSet":
-            	Program.Notify("Nest ", reqs[3]);
             	if (reqs[3] == "Auto")
               		NestUpdate(Device,"fan_timer_active","false","Boolean");
             	else
@@ -213,7 +231,6 @@ When.WebServiceCallReceived(MODULES_DOMAIN_THERMOSTAT,( args ) =&gt; {
           	case "Thermostat.ModeSet":
             	NestUpdate(Device,"hvac_mode",reqs[3],"Text");
           		break;
-
         }
     
 	} catch (Exception e) { 
@@ -225,11 +242,11 @@ When.WebServiceCallReceived(MODULES_DOMAIN_THERMOSTAT,( args ) =&gt; {
 
 Func&lt;ModuleHelper, JToken, JToken, bool&gt; refreshStructure = (structure, Structure, Data) =&gt; 
 {
+
     structure.Parameter("Structure.StructureId").Value = Structure["structure_id"].ToString();
     structure.Instance.Name = Structure["name"].ToString();
 
   	var awayMode = structure.Parameter("Away.Mode");
-
     switch (Structure["away"].ToString()) {
      	case "away":
      	case "auto-away":
@@ -244,15 +261,13 @@ Func&lt;ModuleHelper, JToken, JToken, bool&gt; refreshStructure = (structure, St
           		Program.RaiseEvent(structure, "Away.Mode", "Home", EVENT_DESCRIPTION);
             }
         	break;
-       
     }
 	return true;
 }; 
 
 When.WebServiceCallReceived(MODULES_DOMAIN_STRUCTURE,( args ) =&gt; {
   
-    try
-    {
+    try {
         // 1 = Address, 2 = Param, 3 = Sub, 4 = value
     	string[] reqs = ((string)args).Split('/');
       	ModuleHelper structure = Modules.InDomain(MODULES_DOMAIN_STRUCTURE).WithAddress(reqs[1]).Get();
@@ -283,10 +298,7 @@ Func&lt;ModuleHelper, JToken, JToken, bool&gt; refreshProtect = (protect, protec
     protect.Parameter("Protect.ProtectId").Value = protectdata["device_id"].ToString();
     protect.Instance.Name = nestdata["structures"][protectdata["structure_id"].ToString()]["name"].ToString() +
         " - " + protectdata["name"].ToString();
-//        " - " + nestdata["structures"][protectdata["structure_id"].ToString()]["wheres"][protectdata["where_id"].ToString()]["name"].ToString();
-  
-    //Program.Notify("Nest ", protect.Parameter("Protect.Status").Value);
-  
+
   	var protectStatus = protect.Parameter("Protect.Status");
     if (protectStatus.Value !=  protectdata["ui_color_state"].ToString()) {
     	protectStatus.Value =  protectdata["ui_color_state"].ToString();
@@ -330,7 +342,6 @@ Func&lt;ModuleHelper, JToken, JToken, bool&gt; refreshProtect = (protect, protec
 }; 
 
 When.WebServiceCallReceived(MODULES_DOMAIN_PROTECT,( args ) =&gt; {
-  
 
     try {
         // 1 = Address, 2 = Param, 3 = Sub, 4 = value
@@ -349,25 +360,43 @@ Func&lt;ModuleHelper, JToken, JToken, bool&gt; refreshCamera = (camera, camerada
     camera.Parameter("Camera.CameraId").Value = cameradata["device_id"].ToString();
     camera.Instance.Name = nestdata["structures"][cameradata["structure_id"].ToString()]["name"].ToString() +
       " - " + cameradata["name"].ToString();
-      //  " - " + nestdata["structures"][cameradata["structure_id"].ToString()]["wheres"][cameradata["where_id"].ToString()]["name"].ToString();
-  
-    //Program.Notify("Nest ", camera.Parameter("IpCamera.ImageURL").Value);
-  
-  	var cameraUrl = camera.Parameter("IpCamera.ImageURL");
-    if (cameraUrl.Value !=  cameradata["snapshot_url"].ToString()) {
+
+    var cameraUrl = camera.Parameter("IpCamera.ImageURL");
+   	if (cameraUrl.Value !=  cameradata["snapshot_url"].ToString()) {
       	cameraUrl.Value =  cameradata["snapshot_url"].ToString();
       	Program.RaiseEvent(camera, "IpCamera.ImageURL", cameraUrl.Value, EVENT_DESCRIPTION);
     }
   
-  	var cameraLastMotion = camera.Parameter("Camera.LastMotion");
-    if (cameraLastMotion.Value !=  cameradata["last_event"]["start_time"].ToString()) {
-      	cameraLastMotion.Value =  cameradata["last_event"]["start_time"].ToString();
-      	Program.RaiseEvent(camera, "Camera.LastMotion", cameraLastMotion.Value, EVENT_DESCRIPTION);
-        Program.RaiseEvent(camera, "Sensor.MotionDetect", "255", "Generic IP Camera");
-        Pause(1);
-        Program.RaiseEvent(camera, "Sensor.MotionDetect", "0", "Generic IP Camera");
+	var cameraLastMotionStart = camera.Parameter("Camera.LastMotionStart");
+	var cameraLastMotionEnd   = camera.Parameter("Camera.LastMotionEnd");
+    try {
+    	if (cameraLastMotionStart.Value !=  cameradata["last_event"]["start_time"].ToString()){
+            if (cameraLastMotionStart.Value !="") {
+ 	     		cameraLastMotionStart.Value =  cameradata["last_event"]["start_time"].ToString();
+    	  		cameraLastMotionEnd.Value   =  cameradata["last_event"]["end_time"].ToString();
+      			Program.RaiseEvent(camera, "Camera.LastMotionStart", cameraLastMotionStart.Value, EVENT_DESCRIPTION);
+	        	Program.RaiseEvent(camera, "Sensor.MotionDetect", "255", EVENT_DESCRIPTION);
+	   	 	} else {
+ 	     		cameraLastMotionStart.Value =  cameradata["last_event"]["start_time"].ToString();
+    	  		cameraLastMotionEnd.Value   =  cameradata["last_event"]["end_time"].ToString();
+            }
+          
+        }
+    } catch (Exception e) { 
+        Program.Notify("Nest ERROR!", e.Message);
     }
- 
+
+    try {
+    	if (cameraLastMotionEnd.Value !=  cameradata["last_event"]["end_time"].ToString()) {
+      		cameraLastMotionEnd.Value =  cameradata["last_event"]["end_time"].ToString();
+      		Program.RaiseEvent(camera, "Camera.LastMotionEnd", cameraLastMotionEnd.Value, EVENT_DESCRIPTION);
+    	    Program.RaiseEvent(camera, "Sensor.MotionDetect", "0", EVENT_DESCRIPTION);
+	    }
+    } catch (Exception e) { 
+        Program.Notify("Nest ERROR!", e.Message);
+    }
+  
+  
     return true;
 }; 
 
@@ -379,64 +408,80 @@ Func&lt;string, bool&gt; NestGet =(aCode) =&gt; {
         string postData = String.Format(DATATOKEN,aCode,
                         	  				Program.Option("NestClientID").Value,
                           					Program.Option("NestClientSecret").Value);
-        Program.Notify("Nest Data", URLTOKEN + " -- " + postData);
    		var res = client.UploadString(URLTOKEN,"POST", postData);
         JObject jdata = JObject.Parse(res);
         Program.Option("NestToken").Value = jdata["access_token"].ToString();
-        Program.Notify("Nest Data", res);
+        SetConnectionState("Connecting");
 		return true;
     } finally {
       client.Dispose();
     }
-  
 };
-
+  
 When.WebServiceCallReceived(MODULES_DOMAIN_CONFIG,( args ) =&gt; {
     try {
      	// 1 = Address, 2 = Param, 3 = Sub, 4 = value
       	string[] reqs = ((string)args).Split('/');
- 
-      	if (reqs[1] == "Data") {
-          	return Program.Option("NestData").Value;
-        }
-      
-      	if (reqs[1] == "Callback") {
-          	string aCode = "";
-          	string aState = "";
-          	string[] parms = reqs[2].Split('&amp;');
-          	foreach (string parm in parms) {
-            	if (parm.Split('=')[0] == "code")
-                	aCode = parm.Split('=')[1];
-               	if (parm.Split('=')[0] == "state")
-                   	aState = parm.Split('=')[1];
-            }
-          
-			if (NestGet(aCode)) {
-		       return "&lt;html&gt;&lt;head&gt;&lt;script&gt;function loaded(){window.setTimeout(CloseMe, 500);}function CloseMe(){window.close();}&lt;/script&gt;&lt;/head&gt;&lt;body onLoad=\"loaded()\"&gt;Hello!&lt;/body&gt;";
-            } 
-     		else {
-          		return "{ \"ResponseValue\" : \"OK\"}";
-	        }
-		}
-      
-      	if (reqs[1] == "Url") {
-          	if (AuthState == "")
-				AuthState = Guid.NewGuid().ToString("n").Substring(0, 10); 
-    		string url = String.Format(URLAUTH,Program.Option("NestClientID").Value.Trim(), AuthState.Trim());
-            return url;
-        }
-		return "{ \"ResponseValue\" : \"ERROR\", \"Error\":\"Invalid action\"}";
 
+       	switch (reqs[1]) {
+     		case "Config":
+	            Program.Parameter(reqs[2]).Value=reqs[3];
+    	      	return "{ \"ResponseValue\" : \"OK\"}" + reqs[3];
+     		case "Data":
+ 	          	return Program.Option("NestData").Value;
+     		case "Pin":
+            	if (reqs[2] != Program.Parameter("NestState").Value)
+    	      		return "{ \"ResponseValue\" : \"ERROR\"," +
+			                " \"Message\":\"Invalid state\"}";
+          
+              	if (NestGet(reqs[3])) {
+                    Program.Parameter("NestState").Value = "";
+		       		return "{ \"ResponseValue\" : \"OK\"}";
+           		} 
+    			else {
+    	   			return "{ \"ResponseValue\" : \"ERROR\","+
+		            	    " \"Message\":\"Invalid PIN\"}";
+		       	}
+          
+   		  case "Connect":
+                SetConnectionState("Disconnecting");
+                Program.Parameter("NestState").Value = "";
+	            Program.Option("NestToken").Value = "";
+                Program.Option("NestState").Value = "";
+		   		return "{ \"ResponseValue\" : \"OK\"}";
+
+          case "Callback":
+          		string aCode = "";
+          		string aState = "";
+          		string[] parms = reqs[2].Split('&amp;');
+	            foreach (string parm in parms) {
+            		if (parm.Split('=')[0] == "code")
+            	    	aCode = parm.Split('=')[1];
+        	       	if (parm.Split('=')[0] == "state")
+    	               	aState = parm.Split('=')[1];
+	            }
+            	if (aState != Program.Parameter("NestState").Value)
+			       return "Erreur Invalid state" + Program.Parameter("NestState").Value + "-" + aState;
+          
+				if (NestGet(aCode)) {
+			       return "&lt;html&gt;&lt;head&gt;&lt;script&gt;function loaded(){window.setTimeout(CloseMe, 500);}function CloseMe(){window.close();}&lt;/script&gt;&lt;/head&gt;&lt;body onLoad=\"loaded()\"&gt;Hello!&lt;/body&gt;";
+            	} 
+     			else {
+    	   			return "{ \"ResponseValue\" : \"ERROR\","+
+		            	    " \"Message\":\"Invalid Code\"}";
+		        }
+      		default:
+		        Program.Notify("Nest ERROR!", (string)args);
+				return "{ \"ResponseValue\" : \"ERROR\", \"Message\":\"Invalid action\"}  " + (string)args;
+       	}
     } catch (Exception e) { 
         Program.Notify("Nest ERROR!", e.Message);
-     	return "{ \"ResponseValue\" : \"ERROR\", \"Error\":\"" + e.Message + "\"}";
+     	return "{ \"ResponseValue\" : \"ERROR\", \"Message\":\"" + e.Message + "\"}";
     }
 }); 
 
-
 Func&lt;string, bool&gt; refreshData = (aData) =&gt; 
 {
-  
     JObject data = JObject.Parse(aData);
 
     int T = 0;
@@ -446,52 +491,41 @@ Func&lt;string, bool&gt; refreshData = (aData) =&gt;
 
     foreach (JToken structure in data["data"]["structures"])
     {
-        //Program.Notify("Nest ", structure.First().ToString());
         S += 1;
-        if (NeedSetup &amp;&amp; Modules.InDomain(MODULES_DOMAIN_STRUCTURE).WithAddress(S.ToString()).Get() == null)
-            Program.AddVirtualModule("HomeAutomation.NestStructure",S.ToString(), "Sensor", "erx/nest/structure");
+        Program.AddVirtualModule("HomeAutomation.NestStructure",S.ToString(), "Sensor", "erx/nest/structure");
   		ModuleHelper Structure = Modules.InDomain(MODULES_DOMAIN_STRUCTURE).WithAddress(S.ToString()).Get();
-      
-      	if (!refreshStructure(Structure,structure.First(), data["data"]))
+        if (Structure!= null) {
+	      	if (!refreshStructure(Structure,structure.First(), data["data"]))
 	      	return false;
+          
+    	    if (structure.First()["thermostats"] != null)
+			    foreach (var id in structure.First()["thermostats"]){
+		        	T += 1;
+			  		ModuleHelper Thermostat = Modules.InDomain(MODULES_DOMAIN_THERMOSTAT).WithAddress(T.ToString()).Get();
+		            if (Thermostat != null)
+	    		    	if (!refreshThermostat(Thermostat,data["data"]["devices"]["thermostats"][id.ToString()], data["data"]))
+			    		  	return false;
+    		    }
       
-        if (structure.First()["thermostats"] != null)
-	    foreach (var id in structure.First()["thermostats"])
-        {
-	        //Program.Notify("Nest Thermo", id.ToString());
-        	T += 1;
-            if (NeedSetup &amp;&amp; Modules.InDomain(MODULES_DOMAIN_THERMOSTAT).WithAddress(T.ToString()).Get() == null)
-	   	        Program.AddVirtualModule("HomeAutomation.NestThermostat", T.ToString(),"Thermostat", "erx/nest/thermostat");
-	  		ModuleHelper Thermostat = Modules.InDomain(MODULES_DOMAIN_THERMOSTAT).WithAddress(T.ToString()).Get();
-	        //Program.Notify("Nest Thermo", "Module - " + T.ToString());
-        	if (!refreshThermostat(Thermostat,data["data"]["devices"]["thermostats"][id.ToString()], data["data"]))
-		      	return false;
-        }
+	        if (structure.First()["smoke_co_alarms"] != null)
+			    foreach (var id in structure.First()["smoke_co_alarms"]) {
+        			P += 1;
+			  		ModuleHelper Protect = Modules.InDomain(MODULES_DOMAIN_PROTECT).WithAddress(P.ToString()).Get();
+        		  	if (Protect != null)
+        				if (!refreshProtect(Protect,data["data"]["devices"]["smoke_co_alarms"][id.ToString()], data["data"]))
+		    			  	return false;
+        		}	
       
-        if (structure.First()["smoke_co_alarms"] != null)
-	    foreach (var id in structure.First()["smoke_co_alarms"])
-        {
-        	P += 1;
-            if (NeedSetup &amp;&amp; Modules.InDomain(MODULES_DOMAIN_PROTECT).WithAddress(P.ToString()).Get() == null) 
-                  Program.AddVirtualModule("HomeAutomation.NestProtect", P.ToString(), "Sensor", "erx/nest/protect");
-	  		ModuleHelper Protect = Modules.InDomain(MODULES_DOMAIN_PROTECT).WithAddress(P.ToString()).Get();
-        	if (!refreshProtect(Protect,data["data"]["devices"]["smoke_co_alarms"][id.ToString()], data["data"]))
-		      	return false;
-        }
-      
-        if (structure.First()["cameras"] != null)
-	    foreach (var id in structure.First()["cameras"])
-        {
-        	C += 1;
-            if (NeedSetup &amp;&amp; Modules.InDomain(MODULES_DOMAIN_CAMERA).WithAddress(C.ToString()).Get() == null) 
-                  Program.AddVirtualModule("HomeAutomation.NestCamera",C.ToString(), "Sensor", "erx/nest/camera");
-          	ModuleHelper Camera = Modules.InDomain(MODULES_DOMAIN_CAMERA).WithAddress(C.ToString()).Get();
-        	if (!refreshCamera(Camera,data["data"]["devices"]["cameras"][id.ToString()], data["data"]))
-		      	return false;
-        }
+        	if (structure.First()["cameras"] != null)
+	    		foreach (var id in structure.First()["cameras"]) {
+		        	C += 1;
+		          	ModuleHelper Camera = Modules.InDomain(MODULES_DOMAIN_CAMERA).WithAddress(C.ToString()).Get();
+        		    if (Camera != null)
+	        			if (!refreshCamera(Camera,data["data"]["devices"]["cameras"][id.ToString()], data["data"]))
+			      			return false;
+        		}
+    	}
     }
-
-    NeedSetup = false;   
    	return true;
 };
 
@@ -500,6 +534,8 @@ Func&lt;bool&gt; NestStream = () =&gt;{
   	if (Program.Option("NestToken").Value == "") 
     	return false;
   
+    SetConnectionState("Connecting");
+
   	Program.Notify("Nest Stream", "Start");
   	string aEvent = "";
   	string aData = "";
@@ -509,36 +545,37 @@ Func&lt;bool&gt; NestStream = () =&gt;{
 	  	client.Headers.Add("Cache-Control","no-cache");
 		client.Headers.Add("Accept","text/event-stream");
 	    using (var stream = client.OpenRead(String.Format(NESTURL,token))) {
+            SetConnectionState("Connected");
 			string line;
-    	    using (System.IO.StreamReader reader = new System.IO.StreamReader(stream))
-        	while (((line = reader.ReadLine())  != null) &amp;&amp; (token == Program.Option("NestToken").Value)) {
-	 			if (line != "") {
-                    int x = line.IndexOf(":");
-                    if (x &gt;= 0) {
-                    	if (line.Substring(0,x) == "event")
-                        	aEvent = line.Substring(x+2, line.Length - x - 2);
-                    	if (line.Substring(0,x) == "data"){
-                        	aData  = line.Substring(x+2, line.Length - x - 2);
-                        }
-                    } 
-            	}
-              	else {
-                  
-              		switch (aEvent) {
-              		case "put":
-                        Program.Option("NestData").Value = aData;
-                        refreshData(aData);
-              			break;
-              		case "auth_revoked":
-	                  	Program.Option("NestToken").Value = "";
-						return false;
-              		case "keep-alive":
-              			break;
-                    default:
-	                  	Program.Notify("Nest Event", aEvent);
-              			break;
+    	    using (System.IO.StreamReader reader = new System.IO.StreamReader(stream)) {
+                while (((line = reader.ReadLine())  != null) &amp;&amp; (token == Program.Option("NestToken").Value)) {
+		 			if (line != "") {
+        	            int x = line.IndexOf(":");
+            	        if (x &gt;= 0) {
+                	    	if (line.Substring(0,x) == "event")
+                    	    	aEvent = line.Substring(x+2, line.Length - x - 2);
+                    		if (line.Substring(0,x) == "data"){
+                	        	aData  = line.Substring(x+2, line.Length - x - 2);
+                    	    }
+                    	} 
             		}
-              	}
+            	  	else {
+                   		switch (aEvent) {
+              			case "put":
+                    	    Program.Option("NestData").Value = aData;
+                        	refreshData(aData);
+              				break;
+              			case "auth_revoked":
+	                  		Program.Option("NestToken").Value = "";
+							return false;
+              			case "keep-alive":
+              				break;
+                    	default:
+	                  		Program.Notify("Nest Event", aEvent);
+              				break;
+            			}
+              		}
+                }
             }
             stream.Close();
     	}
@@ -558,20 +595,20 @@ while (Program.IsEnabled) {
     } catch (Exception e) { 
         Program.Notify("Nest Stream", e.Message);
     }  
+    SetConnectionState("Disconnected");
     Pause(20);  
-    NeedSetup = true;
 }
 
 </ScriptSource>
   <ScriptErrors>[]</ScriptErrors>
   <Domain>HomeAutomation.HomeGenie.Automation</Domain>
-  <Address>1008</Address>
-  <Name>Nest Rest streaming API</Name>
-  <Description>Connect to Nest system</Description>
-  <Group>ERX</Group>
+  <Address>100201</Address>
+  <Name>Nest Control</Name>
+  <Description>You will a Nest developer account, and a Product on the Nest developer portal to use this module:</Description>
+  <Group>Devices and Things</Group>
   <Features />
-  <ActivationTime>2017-05-19T04:05:13.647193Z</ActivationTime>
-  <TriggerTime>2017-05-19T04:05:13.924607Z</TriggerTime>
+  <ActivationTime>2017-05-23T01:10:16.670252Z</ActivationTime>
+  <TriggerTime>2017-05-23T01:10:17.486829Z</TriggerTime>
   <Type>CSharp</Type>
   <IsEnabled>true</IsEnabled>
 </ProgramBlock>
