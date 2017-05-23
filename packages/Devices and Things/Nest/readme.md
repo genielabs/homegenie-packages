@@ -3,6 +3,7 @@ Nest Control.
 
 
 You will a Nest developer account, and a Product on the Nest developer portal to use this module:
+After Add the Nest Login widget for the program and configure the info 
 
 1. Visit `Nest Developers <https://developers.nest.com/>`_, and sign in. Create an account if you don't have one already.
 
