@@ -1,6 +1,6 @@
 Nest Control. 
 
-![Image of Widgets](/HomeGenie - Widgets example.png)
+![Image of Widgets](/homegenie-packages/packages/Devices%20and%20Things/Nest/HomeGenie%20-%20Widgets%20example.png)
 
 You will a Nest developer account, and a Product on the Nest developer portal to use this module:
 After Add the Nest Login widget for the program and configure the info 
