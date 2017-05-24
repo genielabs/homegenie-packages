@@ -11,19 +11,22 @@
    	Program.AddOption("NestClientSecret","", "Product Secret", "text");
   	Program.AddOption("NestToken","", "Token", "password");
     Program.AddOption("StructureCount","1","Number of Structure", "slider:1:15:1");
-    Program.AddOption("ThermostatCount","1","Number of Thermostat", "slider:1:15:1");
-    Program.AddOption("ProtectCount","1","Number of Protect", "slider:1:15:1");
-    Program.AddOption("CameraCount","1","Number of Camera", "slider:1:15:1");
+    Program.AddOption("ThermostatCount","1","Number of Thermostat", "slider:0:15:1");
+    Program.AddOption("ProtectCount","1","Number of Protect", "slider:0:15:1");
+    Program.AddOption("CameraCount","1","Number of Camera", "slider:0:15:1");
     Program.AddOption("UsePin","1","Product Use Pin", "checkbox");
   
 
     Program.AddVirtualModules("HomeAutomation.NestStructure", "Sensor", "erx/nest/structure"
                               ,1,(int)Program.Option("StructureCount").DecimalValue);
-    Program.AddVirtualModules("HomeAutomation.NestProtect", "Sensor", "erx/nest/protect"
+    if (Program.Option("ProtectCount").DecimalValue &gt; 0)
+      Program.AddVirtualModules("HomeAutomation.NestProtect", "Sensor", "erx/nest/protect"
                               ,1,(int)Program.Option("ProtectCount").DecimalValue);
-    Program.AddVirtualModules("HomeAutomation.NestThermostat", "Thermostat", "erx/nest/thermostat"
+    if (Program.Option("ThermostatCount").DecimalValue &gt; 0)
+      Program.AddVirtualModules("HomeAutomation.NestThermostat", "Thermostat", "erx/nest/thermostat"
                               ,1,(int)Program.Option("ThermostatCount").DecimalValue);
-    Program.AddVirtualModules("HomeAutomation.NestCamera", "Sensor", "erx/nest/camera"
+    if (Program.Option("CameraCount").DecimalValue &gt; 0)
+      Program.AddVirtualModules("HomeAutomation.NestCamera", "Sensor", "erx/nest/camera"
                               ,1,(int)Program.Option("CameraCount").DecimalValue);
 
 });
@@ -600,15 +603,15 @@ while (Program.IsEnabled) {
 }
 
 </ScriptSource>
-  <ScriptErrors>[]</ScriptErrors>
+  <ScriptErrors />
   <Domain>HomeAutomation.HomeGenie.Automation</Domain>
   <Address>100201</Address>
   <Name>Nest Control</Name>
   <Description>You will a Nest developer account, and a Product on the Nest developer portal to use this module:</Description>
   <Group>Devices and Things</Group>
   <Features />
-  <ActivationTime>2017-05-23T01:10:16.670252Z</ActivationTime>
-  <TriggerTime>2017-05-23T01:10:17.486829Z</TriggerTime>
+  <ActivationTime>2017-05-24T02:46:23.843126Z</ActivationTime>
+  <TriggerTime>2017-05-24T02:46:24.398242Z</TriggerTime>
   <Type>CSharp</Type>
   <IsEnabled>true</IsEnabled>
 </ProgramBlock>
