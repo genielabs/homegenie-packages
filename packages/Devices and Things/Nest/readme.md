@@ -35,20 +35,21 @@ You will a Nest developer account, and a Product on the Nest developer portal to
 ![Image of Product](https://github.com/saue0/homegenie-packages/raw/master/packages/Devices%20and%20Things/Nest/Nest%20Developers%20-%20Product%20Key.png)
 
 ## Home Genie config...
-Once the package istall, you will need to add the Prpgram widget to complete the configuration.
+Once the package install
+
+1. you will need to add the Prpgram widget to complete the configuration.
 
 ![Image of Config](https://github.com/saue0/homegenie-packages/raw/master/packages/Devices%20and%20Things/Nest/Pgm%20Control%20Login.png)
 
-Click on the config button. Complete the info for the product ID an Key you created earlier.
-
+2. Click "config" button. Complete the info for the product ID an Key you created earlier.
 ![Image of Config](https://github.com/saue0/homegenie-packages/raw/master/packages/Devices%20and%20Things/Nest/Pgm%20Config.png)
 
-After click the login button.
-
+3. Click "login" button.
 ![Image of pIN](https://github.com/saue0/homegenie-packages/raw/master/packages/Devices%20and%20Things/Nest/Pgm%20Pin.png)
 
-Click request pin, a new windows will open on the Nest site to confirm the acces write.
-Copy the PIN and enter it on the request. Click the Apply Pin
+4. Click "Request Pin". A new windows will open on the Nest site to confirm the acces write.
+
+5. Copy the PIN and enter it on the request. Click "Apply Pin"
 
 If everything went well. You should be connected.
 
@@ -60,4 +61,4 @@ Here an example of the widget
 
 ## To Do 
 Of course there is place for more feature.
-Ex: the Camera is symply the IP Camera widget changed a bits. It is not tester because i do not have a Nest Camera and the Nest simulator is not giving image from the url.
+Ex: the Camera is simply the IP Camera widget changed a bits. It is not tester because i do not have a Nest Camera and the Nest simulator is not giving image from the url. The camera support detection....
