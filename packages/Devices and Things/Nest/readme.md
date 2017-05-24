@@ -1,9 +1,7 @@
-Nest Control. 
+# Nest Control. 
 
 You will a Nest developer account, and a Product on the Nest developer portal to use this module:
 After Add the Nest Login widget for the program and configure the info
-
-![Image of Config](https://github.com/saue0/homegenie-packages/raw/master/packages/Devices%20and%20Things/Nest/Pgm%20Config.png)
 
 1. Visit [Nest Developers](https://developers.nest.com/), and sign in. Create an account if you don't have one already.
 
@@ -36,10 +34,29 @@ After Add the Nest Login widget for the program and configure the info
 
 9. Once the new product page opens the "Product ID" and "Product Secret" are located on the right side. 
 ![Image of Product](https://github.com/saue0/homegenie-packages/raw/master/packages/Devices%20and%20Things/Nest/Nest%20Developers%20-%20Product%20Key.png)
+
+# Home Genie config...
+Once the package istall, you will need to add the Prpgram widget to complete the configuration.
+
+![Image of Config](https://github.com/saue0/homegenie-packages/raw/master/packages/Devices%20and%20Things/Nest/Pgm%20Control%20Login.png)
+
+Click on the config button. Complete the info for the product ID an Key you created earlier.
+
+
 ![Image of Config](https://github.com/saue0/homegenie-packages/raw/master/packages/Devices%20and%20Things/Nest/Pgm%20Config.png)
 
+After click the login button.
+
+![Image of pIN](https://github.com/saue0/homegenie-packages/raw/master/packages/Devices%20and%20Things/Nest/Pgm%20Pin.png)
+Click request pin, a new windows will open on the Nest site to confirm the acces write.
+Copy the PIN and enter it on the request. Click the Apply Pin
+
+If everything went well. You should be connected.
+
+![Image of Logged](https://github.com/saue0/homegenie-packages/raw/master/packages/Devices%20and%20Things/Nest/Pgm%20Control%20Logout.png)
 
 
 
+# Widget example
 ![Image of Widgets](https://github.com/saue0/homegenie-packages/raw/master/packages/Devices%20and%20Things/Nest/HomeGenie%20-%20Widgets%20example.png)
 
