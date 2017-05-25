@@ -38,7 +38,7 @@
             "file": "Nest_Control.hgx",
             "name":"Nest Control",
             "description": "Nest Control driver app",
-            "group": "nest" 
+            "group": "Devices and Things" 
         }
     ],
     "interfaces": [ ]
