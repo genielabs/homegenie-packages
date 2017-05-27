@@ -46,6 +46,8 @@ const string URLTOKEN   = "https://api.home.nest.com/oauth2/access_token";
 
 const string DATATOKEN  = "code={0}&amp;client_id={1}&amp;client_secret={2}&amp;grant_type=authorization_code";
 
+System.Threading.Tasks.Task&lt;string&gt; MyTask;
+
 Program.Parameter("NestState").Value = "";
 Program.Parameter("NestAuthUrl").Value = URLAUTH;
 Program.Parameter("NestConnect").Value = "Not Connected";
@@ -75,9 +77,10 @@ Func&lt;string, string, dynamic , string, string&gt; NestUpdate = (string Device
         client.Headers["Content-Type"]  = "application/json";
         client.Headers["Authorization"] = "Bearer " + Program.Option("NestToken").Value;
 
+        //Program.Notify("Nest Data!", String.Format(NESTURLUPD, Device) + " - " + jsonargs);
         var res = client.UploadString(String.Format(NESTURLUPD, Device),"PUT", jsonargs);
 		return res;
-    } finally {
+    } finally { 
       client.Dispose();
     }
 };
@@ -448,6 +451,7 @@ When.WebServiceCallReceived(MODULES_DOMAIN_CONFIG,( args ) =&gt; {
           
    		  case "Connect":
                 SetConnectionState("Disconnecting");
+          		//MyTask.Cancel();
                 Program.Parameter("NestState").Value = "";
 	            Program.Option("NestToken").Value = "";
                 Program.Option("NestState").Value = "";
@@ -532,7 +536,19 @@ Func&lt;string, bool&gt; refreshData = (aData) =&gt;
    	return true;
 };
 
-Func&lt;bool&gt; NestStream = () =&gt;{
+
+//Func&lt;System.IO.StreamReader, System.Threading.Tasks.Task&lt;string&gt;&gt; myreaderasync = (reader) =&gt;{
+//  MyTask = reader.ReadLineAsync();
+//  return MyTask;
+//};
+
+//Func&lt;System.IO.StreamReader, string&gt; myreader = (reader) =&gt;{
+//  System.Threading.Tasks.Task&lt;string&gt; myTask = System.Threading.Tasks.Task.Run(() =&gt; myreaderasync(reader));
+//  return myTask.Result;
+////  return reader.ReadLine();
+//};
+
+Func&lt;bool&gt; NestStream = () =&gt;  {
 
   	if (Program.Option("NestToken").Value == "") 
     	return false;
@@ -552,6 +568,7 @@ Func&lt;bool&gt; NestStream = () =&gt;{
 			string line;
     	    using (System.IO.StreamReader reader = new System.IO.StreamReader(stream)) {
                 while (((line = reader.ReadLine())  != null) &amp;&amp; (token == Program.Option("NestToken").Value)) {
+                //while (((line = myreader(reader))  != null) &amp;&amp; (token == Program.Option("NestToken").Value)) {
 		 			if (line != "") {
         	            int x = line.IndexOf(":");
             	        if (x &gt;= 0) {
@@ -594,7 +611,7 @@ Func&lt;bool&gt; NestStream = () =&gt;{
 // ****************
 while (Program.IsEnabled) {
     try {
-		NestStream();      
+		NestStream();//.RunSynchronously();      
     } catch (Exception e) { 
         Program.Notify("Nest Stream", e.Message);
     }  
@@ -603,15 +620,15 @@ while (Program.IsEnabled) {
 }
 
 </ScriptSource>
-  <ScriptErrors />
+  <ScriptErrors>[]</ScriptErrors>
   <Domain>HomeAutomation.HomeGenie.Automation</Domain>
   <Address>100201</Address>
   <Name>Nest Control</Name>
   <Description>You will a Nest developer account, and a Product on the Nest developer portal to use this module:</Description>
   <Group>Devices and Things</Group>
   <Features />
-  <ActivationTime>2017-05-24T02:46:23.843126Z</ActivationTime>
-  <TriggerTime>2017-05-24T02:46:24.398242Z</TriggerTime>
+  <ActivationTime>2017-05-27T19:04:15.388204Z</ActivationTime>
+  <TriggerTime>2017-05-27T19:04:16.028068Z</TriggerTime>
   <Type>CSharp</Type>
   <IsEnabled>true</IsEnabled>
 </ProgramBlock>
