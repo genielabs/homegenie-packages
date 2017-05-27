@@ -201,6 +201,13 @@ Func&lt;ModuleHelper, JToken, JToken, bool&gt; refreshThermostat = (thermostat, 
         sensortemp.Value = thermodata["ambient_temperature_c"].ToString();
        	Program.RaiseEvent(thermostat, "Sensor.Temperature",thermodata["ambient_temperature_c"].ToString(), EVENT_DESCRIPTION);
     }
+  
+     // humidity
+   	var humidity = thermostat.Parameter("Sensor.Humidity");
+    if (humidity.Value != thermodata["humidity"].ToString()){
+        humidity.Value = thermodata["humidity"].ToString();
+       	Program.RaiseEvent(thermostat, "Sensor.Humidity",thermodata["humidity"].ToString(), EVENT_DESCRIPTION);
+    }
   return true;
 };
 
@@ -627,8 +634,8 @@ while (Program.IsEnabled) {
   <Description>You will a Nest developer account, and a Product on the Nest developer portal to use this module:</Description>
   <Group>Devices and Things</Group>
   <Features />
-  <ActivationTime>2017-05-27T19:04:15.388204Z</ActivationTime>
-  <TriggerTime>2017-05-27T19:04:16.028068Z</TriggerTime>
+  <ActivationTime>2017-05-27T20:51:18.47871Z</ActivationTime>
+  <TriggerTime>2017-05-27T20:51:19.210261Z</TriggerTime>
   <Type>CSharp</Type>
   <IsEnabled>true</IsEnabled>
 </ProgramBlock>
