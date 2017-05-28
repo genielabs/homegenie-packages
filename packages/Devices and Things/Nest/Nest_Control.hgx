@@ -153,6 +153,8 @@ Func&lt;ModuleHelper, JToken, JToken, bool&gt; refreshThermostat = (thermostat, 
   	var HighSetPoint = thermostat.Parameter("Thermostat.SetPoint.HighSetPoint");
   	var LowSetPoint = thermostat.Parameter("Thermostat.SetPoint.LowSetPoint");
   	var SetPoint = thermostat.Parameter("Thermostat.SetPoint.SetPoint");
+  	var ecoHighSetPoint = thermostat.Parameter("Thermostat.SetPoint.ecoHighSetPoint");
+  	var ecoLowSetPoint = thermostat.Parameter("Thermostat.SetPoint.ecoLowSetPoint");
     
 	if (SetPoint.Value != thermodata["target_temperature_c"].ToString()){
    		SetPoint.Value = thermodata["target_temperature_c"].ToString();
@@ -165,6 +167,14 @@ Func&lt;ModuleHelper, JToken, JToken, bool&gt; refreshThermostat = (thermostat, 
 	if (HighSetPoint.Value != thermodata["target_temperature_high_c"].ToString()){
    		HighSetPoint.Value = thermodata["target_temperature_high_c"].ToString();
    		Program.RaiseEvent(thermostat, "Thermostat.SetPoint.HighSetPoint",HighSetPoint.Value , EVENT_DESCRIPTION);
+	} 
+	if (ecoLowSetPoint.Value != thermodata["eco_temperature_low_c"].ToString()){
+   		ecoLowSetPoint.Value = thermodata["eco_temperature_low_c"].ToString();
+   		Program.RaiseEvent(thermostat, "Thermostat.SetPoint.ecoLowSetPoint",ecoLowSetPoint.Value , EVENT_DESCRIPTION);
+	} 
+	if (ecoHighSetPoint.Value != thermodata["eco_temperature_high_c"].ToString()){
+   		ecoHighSetPoint.Value = thermodata["eco_temperature_high_c"].ToString();
+   		Program.RaiseEvent(thermostat, "Thermostat.SetPoint.ecoHighSetPoint",ecoHighSetPoint.Value , EVENT_DESCRIPTION);
 	} 
     
      // Mode
@@ -185,6 +195,12 @@ Func&lt;ModuleHelper, JToken, JToken, bool&gt; refreshThermostat = (thermostat, 
        		if (thermostatMode.Value != "Cool") {
           		thermostatMode.Value = "Cool";
           		Program.RaiseEvent(thermostat, "Thermostat.Mode", "Cool", EVENT_DESCRIPTION);
+        	}
+  			break;
+     	case "eco":
+       		if (thermostatMode.Value != "Eco") {
+          		thermostatMode.Value = "Eco";
+          		Program.RaiseEvent(thermostat, "Thermostat.Mode", "Eco", EVENT_DESCRIPTION);
         	}
   			break;
      	case "off":
@@ -225,13 +241,16 @@ When.WebServiceCallReceived(MODULES_DOMAIN_THERMOSTAT,( args ) =&gt; {
             
             	switch (reqs[3]){
               		case "LowSetPoint":
-                		type = "low_";
+                		type = "target_temperature_low_";
               			break;
               		case "HighSetPoint":
-                		type = "high_";
+                		type = "target_temperature_high_";
+              			break;
+              		case "SetPoint":
+                		type = "target_temperature_";
               			break;
             	}
-          		NestUpdate(Device,"target_temperature_" + type + scale,reqs[4],"Float");
+          		NestUpdate(Device, type + scale,reqs[4],"Float");
           		break;
           
           	case "Thermostat.FanModeSet":
@@ -640,8 +659,8 @@ while (Program.IsEnabled) {
   <Description>You will a Nest developer account, and a Product on the Nest developer portal to use this module:</Description>
   <Group>Devices and Things</Group>
   <Features />
-  <ActivationTime>2017-05-28T02:43:57.304836Z</ActivationTime>
-  <TriggerTime>2017-05-28T02:43:58.026431Z</TriggerTime>
+  <ActivationTime>2017-05-28T05:40:35.484222Z</ActivationTime>
+  <TriggerTime>2017-05-28T05:40:36.340612Z</TriggerTime>
   <Type>CSharp</Type>
   <IsEnabled>true</IsEnabled>
 </ProgramBlock>
