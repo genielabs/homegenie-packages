@@ -513,13 +513,13 @@ Func&lt;string, bool&gt; refreshData = (aData) =&gt;
         if (Structure!= null) {
 	      	if (!refreshStructure(Structure,structure.First(), data["data"]))
 	      	return false;
-            Program.Notify("Nest Log", "Structure");
+            //Program.Notify("Nest Log", "Structure");
 
     	    if (structure.First()["thermostats"] != null)
 			    foreach (var id in structure.First()["thermostats"]){
 		        	T += 1;
 			  		ModuleHelper Thermostat = Modules.InDomain(MODULES_DOMAIN_THERMOSTAT).WithAddress(T.ToString()).Get();
-		            Program.Notify("Nest Log", "Thermostat");
+		            //Program.Notify("Nest Log", "Thermostat");
 		            if (Thermostat != null)
 	    		    	if (!refreshThermostat(Thermostat,data["data"]["devices"]["thermostats"][id.ToString()], data["data"]))
 			    		  	return false;
@@ -529,7 +529,7 @@ Func&lt;string, bool&gt; refreshData = (aData) =&gt;
 			    foreach (var id in structure.First()["smoke_co_alarms"]) {
         			P += 1;
 			  		ModuleHelper Protect = Modules.InDomain(MODULES_DOMAIN_PROTECT).WithAddress(P.ToString()).Get();
-		            Program.Notify("Nest Log", "Protect");
+		            //Program.Notify("Nest Log", "Protect");
         		  	if (Protect != null)
         				if (!refreshProtect(Protect,data["data"]["devices"]["smoke_co_alarms"][id.ToString()], data["data"]))
 		    			  	return false;
@@ -539,7 +539,7 @@ Func&lt;string, bool&gt; refreshData = (aData) =&gt;
 	    		foreach (var id in structure.First()["cameras"]) {
 		        	C += 1;
 		          	ModuleHelper Camera = Modules.InDomain(MODULES_DOMAIN_CAMERA).WithAddress(C.ToString()).Get();
-		            Program.Notify("Nest Log", "Camera");
+		            //Program.Notify("Nest Log", "Camera");
         		    if (Camera != null)
 	        			if (!refreshCamera(Camera,data["data"]["devices"]["cameras"][id.ToString()], data["data"]))
 			      			return false;
@@ -640,8 +640,8 @@ while (Program.IsEnabled) {
   <Description>You will a Nest developer account, and a Product on the Nest developer portal to use this module:</Description>
   <Group>Devices and Things</Group>
   <Features />
-  <ActivationTime>2017-05-28T00:58:50.571243Z</ActivationTime>
-  <TriggerTime>2017-05-28T00:58:51.305744Z</TriggerTime>
+  <ActivationTime>2017-05-28T02:43:57.304836Z</ActivationTime>
+  <TriggerTime>2017-05-28T02:43:58.026431Z</TriggerTime>
   <Type>CSharp</Type>
   <IsEnabled>true</IsEnabled>
 </ProgramBlock>
