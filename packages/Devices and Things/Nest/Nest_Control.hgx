@@ -247,7 +247,7 @@ When.WebServiceCallReceived(MODULES_DOMAIN_THERMOSTAT,( args ) =&gt; {
         }
     
 	} catch (Exception e) { 
-        Program.Notify("Nest ERROR!", e.Message);
+        Program.Notify("Nest ERROR! WC Therm", e.Message);
     }
   
    return "{ \"ResponseValue\" : \"OK\"}";
@@ -382,7 +382,8 @@ Func&lt;ModuleHelper, JToken, JToken, bool&gt; refreshCamera = (camera, camerada
   
 	var cameraLastMotionStart = camera.Parameter("Camera.LastMotionStart");
 	var cameraLastMotionEnd   = camera.Parameter("Camera.LastMotionEnd");
-    try {
+    if (cameradata["last_event"] != null) {
+      try {
     	if (cameraLastMotionStart.Value !=  cameradata["last_event"]["start_time"].ToString()){
             if (cameraLastMotionStart.Value !="") {
  	     		cameraLastMotionStart.Value =  cameradata["last_event"]["start_time"].ToString();
@@ -395,18 +396,19 @@ Func&lt;ModuleHelper, JToken, JToken, bool&gt; refreshCamera = (camera, camerada
             }
           
         }
-    } catch (Exception e) { 
+      } catch (Exception e) { 
         Program.Notify("Nest ERROR!", e.Message);
-    }
+      }
 
-    try {
+      try {
     	if (cameraLastMotionEnd.Value !=  cameradata["last_event"]["end_time"].ToString()) {
       		cameraLastMotionEnd.Value =  cameradata["last_event"]["end_time"].ToString();
       		Program.RaiseEvent(camera, "Camera.LastMotionEnd", cameraLastMotionEnd.Value, EVENT_DESCRIPTION);
     	    Program.RaiseEvent(camera, "Sensor.MotionDetect", "0", EVENT_DESCRIPTION);
 	    }
-    } catch (Exception e) { 
+      } catch (Exception e) { 
         Program.Notify("Nest ERROR!", e.Message);
+      }
     }
   
   
@@ -511,11 +513,13 @@ Func&lt;string, bool&gt; refreshData = (aData) =&gt;
         if (Structure!= null) {
 	      	if (!refreshStructure(Structure,structure.First(), data["data"]))
 	      	return false;
-          
+            Program.Notify("Nest Log", "Structure");
+
     	    if (structure.First()["thermostats"] != null)
 			    foreach (var id in structure.First()["thermostats"]){
 		        	T += 1;
 			  		ModuleHelper Thermostat = Modules.InDomain(MODULES_DOMAIN_THERMOSTAT).WithAddress(T.ToString()).Get();
+		            Program.Notify("Nest Log", "Thermostat");
 		            if (Thermostat != null)
 	    		    	if (!refreshThermostat(Thermostat,data["data"]["devices"]["thermostats"][id.ToString()], data["data"]))
 			    		  	return false;
@@ -525,6 +529,7 @@ Func&lt;string, bool&gt; refreshData = (aData) =&gt;
 			    foreach (var id in structure.First()["smoke_co_alarms"]) {
         			P += 1;
 			  		ModuleHelper Protect = Modules.InDomain(MODULES_DOMAIN_PROTECT).WithAddress(P.ToString()).Get();
+		            Program.Notify("Nest Log", "Protect");
         		  	if (Protect != null)
         				if (!refreshProtect(Protect,data["data"]["devices"]["smoke_co_alarms"][id.ToString()], data["data"]))
 		    			  	return false;
@@ -534,6 +539,7 @@ Func&lt;string, bool&gt; refreshData = (aData) =&gt;
 	    		foreach (var id in structure.First()["cameras"]) {
 		        	C += 1;
 		          	ModuleHelper Camera = Modules.InDomain(MODULES_DOMAIN_CAMERA).WithAddress(C.ToString()).Get();
+		            Program.Notify("Nest Log", "Camera");
         		    if (Camera != null)
 	        			if (!refreshCamera(Camera,data["data"]["devices"]["cameras"][id.ToString()], data["data"]))
 			      			return false;
@@ -634,8 +640,8 @@ while (Program.IsEnabled) {
   <Description>You will a Nest developer account, and a Product on the Nest developer portal to use this module:</Description>
   <Group>Devices and Things</Group>
   <Features />
-  <ActivationTime>2017-05-27T20:51:18.47871Z</ActivationTime>
-  <TriggerTime>2017-05-27T20:51:19.210261Z</TriggerTime>
+  <ActivationTime>2017-05-28T00:58:50.571243Z</ActivationTime>
+  <TriggerTime>2017-05-28T00:58:51.305744Z</TriggerTime>
   <Type>CSharp</Type>
   <IsEnabled>true</IsEnabled>
 </ProgramBlock>
