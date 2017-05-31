@@ -17,7 +17,10 @@
     Program.AddOption("UsePin","1","Product Use Pin", "checkbox");
   
 
-    Program.AddVirtualModules("HomeAutomation.NestStructure", "Sensor", "erx/nest/structure"
+});
+
+return true;</ScriptCondition>
+  <ScriptSource>    Program.AddVirtualModules("HomeAutomation.NestStructure", "Sensor", "erx/nest/structure"
                               ,1,(int)Program.Option("StructureCount").DecimalValue);
     if (Program.Option("ProtectCount").DecimalValue &gt; 0)
       Program.AddVirtualModules("HomeAutomation.NestProtect", "Sensor", "erx/nest/protect"
@@ -29,10 +32,9 @@
       Program.AddVirtualModules("HomeAutomation.NestCamera", "Sensor", "erx/nest/camera"
                               ,1,(int)Program.Option("CameraCount").DecimalValue);
 
-});
 
-return true;</ScriptCondition>
-  <ScriptSource>const string MODULES_DOMAIN_STRUCTURE  = "HomeAutomation.NestStructure";
+
+const string MODULES_DOMAIN_STRUCTURE  = "HomeAutomation.NestStructure";
 const string MODULES_DOMAIN_THERMOSTAT = "HomeAutomation.NestThermostat";
 const string MODULES_DOMAIN_PROTECT    = "HomeAutomation.NestProtect";
 const string MODULES_DOMAIN_CAMERA     = "HomeAutomation.NestCamera";
@@ -91,6 +93,7 @@ Func&lt;ModuleHelper, JToken, JToken, bool&gt; refreshThermostat = (thermostat, 
   	var thermostatMode = thermostat.Parameter("Thermostat.Mode");
   	var fanstate = thermostat.Parameter("Thermostat.FanState");
   	var fanmode = thermostat.Parameter("Thermostat.FanMode");
+  	var operatingStateSensor = thermostat.Parameter("Sensor.OperatingState");
   
     thermostat.Parameter("Thermostat.StructureId").Value = thermodata["structure_id"].ToString();
     thermostat.Parameter("Thermostat.ThermostatId").Value = thermodata["device_id"].ToString();
@@ -100,10 +103,21 @@ Func&lt;ModuleHelper, JToken, JToken, bool&gt; refreshThermostat = (thermostat, 
     // State
 	switch (thermodata["hvac_state"].ToString()) {
     	case "heating" :
-       		if (operatingState.Value != "Heating") {
-                operatingState.Value = "Heating";
-          		Program.RaiseEvent(thermostat, "Thermostat.OperatingState", "Heating", EVENT_DESCRIPTION);
-        	}
+		  	if (thermodata["is_using_emergency_heat"].ToString() == "true") {
+      			if (operatingState.Value != "Heating") {
+                	operatingState.Value = "Heating";
+          			Program.RaiseEvent(thermostat, "Thermostat.OperatingState", "Heating", EVENT_DESCRIPTION);
+                	operatingStateSensor.Value = "2";
+          			Program.RaiseEvent(thermostat, "Sensor.OperatingState", "2", ":nopopup:" + EVENT_DESCRIPTION);
+        		}
+          	} else {
+       			if (operatingState.Value != "Heating") {
+                	operatingState.Value = "Heating";
+          			Program.RaiseEvent(thermostat, "Thermostat.OperatingState", "Heating", EVENT_DESCRIPTION);
+                	operatingStateSensor.Value = "1";
+          			Program.RaiseEvent(thermostat, "Sensor.OperatingState", "1", ":nopopup:" + EVENT_DESCRIPTION);
+        		}
+            }
    			if (fanstate.Value != "Running") {
        			fanstate.Value = "Running";
        			Program.RaiseEvent(thermostat, "Thermostat.FanState", "Running", EVENT_DESCRIPTION);
@@ -113,6 +127,8 @@ Func&lt;ModuleHelper, JToken, JToken, bool&gt; refreshThermostat = (thermostat, 
        		if (operatingState.Value != "Cooling") {
        		    operatingState.Value = "Cooling";
           		Program.RaiseEvent(thermostat, "Thermostat.OperatingState", "Cooling", EVENT_DESCRIPTION);
+               	operatingStateSensor.Value = "-1";
+          		Program.RaiseEvent(thermostat, "Sensor.OperatingState", "-1", ":nopopup:" + EVENT_DESCRIPTION);
        		}
    			if (fanstate.Value != "Running") {
       			fanstate.Value = "Running";
@@ -128,6 +144,8 @@ Func&lt;ModuleHelper, JToken, JToken, bool&gt; refreshThermostat = (thermostat, 
 	      		if (operatingState.Value != "Circulate") {
                     operatingState.Value = "Circulate";
           			Program.RaiseEvent(thermostat, "Thermostat.OperatingState", "Circulate", EVENT_DESCRIPTION);
+                 	operatingStateSensor.Value = "0";
+            		Program.RaiseEvent(thermostat, "Sensor.OperatingState", "0", ":nopopup:" + EVENT_DESCRIPTION);
 				}
 	      		if (fanmode.Value != "Circulate") {
                     fanmode.Value = "Circulate";
@@ -141,6 +159,8 @@ Func&lt;ModuleHelper, JToken, JToken, bool&gt; refreshThermostat = (thermostat, 
 	      		if (operatingState.Value != "") {
                     operatingState.Value = "";
     	     		Program.RaiseEvent(thermostat, "Thermostat.OperatingState", "", EVENT_DESCRIPTION);
+                 	operatingStateSensor.Value = "0";
+            		Program.RaiseEvent(thermostat, "Sensor.OperatingState", "0", ":nopopup:" + EVENT_DESCRIPTION);
 				}
 	      		if (fanmode.Value != "Auto") {
                     fanmode.Value = "Auto";
@@ -621,6 +641,14 @@ Func&lt;bool&gt; NestStream = () =&gt;  {
 	                  		Program.Option("NestToken").Value = "";
 							return false;
               			case "keep-alive":
+  							Modules.InDomain(MODULES_DOMAIN_THERMOSTAT ).Each((mod)=&gt;{
+      							if (mod.Parameter("Sensor.Temperature").DecimalValue &gt; 0)
+  									Program.RaiseEvent(mod,"Sensor.Temperature", mod.Parameter("Sensor.Temperature").Value, ":nopopup:" + EVENT_DESCRIPTION);
+  							    if (mod.Parameter("Sensor.Humidity").DecimalValue &gt; 0)
+  									Program.RaiseEvent(mod,"Sensor.Humidity", mod.Parameter("Sensor.Humidity").Value, ":nopopup:" + EVENT_DESCRIPTION);
+			            		Program.RaiseEvent(mod, "Sensor.OperatingState", mod.Parameter("Sensor.OperatingState").Value, ":nopopup:" + EVENT_DESCRIPTION);
+  							    return false;
+  							  });                          
               				break;
                     	default:
 	                  		Program.Notify("Nest Event", aEvent);
@@ -652,15 +680,15 @@ while (Program.IsEnabled) {
 }
 
 </ScriptSource>
-  <ScriptErrors>[]</ScriptErrors>
+  <ScriptErrors />
   <Domain>HomeAutomation.HomeGenie.Automation</Domain>
   <Address>100201</Address>
   <Name>Nest Control</Name>
   <Description>You will a Nest developer account, and a Product on the Nest developer portal to use this module:</Description>
   <Group>Devices and Things</Group>
   <Features />
-  <ActivationTime>2017-05-28T05:40:35.484222Z</ActivationTime>
-  <TriggerTime>2017-05-28T05:40:36.340612Z</TriggerTime>
+  <ActivationTime xsi:nil="true" />
+  <TriggerTime>2017-05-31T20:26:58.663206Z</TriggerTime>
   <Type>CSharp</Type>
   <IsEnabled>true</IsEnabled>
 </ProgramBlock>
