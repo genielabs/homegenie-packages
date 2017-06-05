@@ -17,7 +17,10 @@
     Program.AddOption("UsePin","1","Product Use Pin", "checkbox");
   
 
-    Program.AddVirtualModules("HomeAutomation.NestStructure", "Sensor", "erx/nest/structure"
+});
+
+return true;</ScriptCondition>
+  <ScriptSource>    Program.AddVirtualModules("HomeAutomation.NestStructure", "Sensor", "erx/nest/structure"
                               ,1,(int)Program.Option("StructureCount").DecimalValue);
     if (Program.Option("ProtectCount").DecimalValue &gt; 0)
       Program.AddVirtualModules("HomeAutomation.NestProtect", "Sensor", "erx/nest/protect"
@@ -29,10 +32,9 @@
       Program.AddVirtualModules("HomeAutomation.NestCamera", "Sensor", "erx/nest/camera"
                               ,1,(int)Program.Option("CameraCount").DecimalValue);
 
-});
 
-return true;</ScriptCondition>
-  <ScriptSource>const string MODULES_DOMAIN_STRUCTURE  = "HomeAutomation.NestStructure";
+
+const string MODULES_DOMAIN_STRUCTURE  = "HomeAutomation.NestStructure";
 const string MODULES_DOMAIN_THERMOSTAT = "HomeAutomation.NestThermostat";
 const string MODULES_DOMAIN_PROTECT    = "HomeAutomation.NestProtect";
 const string MODULES_DOMAIN_CAMERA     = "HomeAutomation.NestCamera";
@@ -45,6 +47,8 @@ const string NESTURLUPD = "https://developer-api.nest.com/{0}";
 const string URLTOKEN   = "https://api.home.nest.com/oauth2/access_token";
 
 const string DATATOKEN  = "code={0}&amp;client_id={1}&amp;client_secret={2}&amp;grant_type=authorization_code";
+
+System.Threading.Tasks.Task&lt;string&gt; MyTask;
 
 Program.Parameter("NestState").Value = "";
 Program.Parameter("NestAuthUrl").Value = URLAUTH;
@@ -75,9 +79,10 @@ Func&lt;string, string, dynamic , string, string&gt; NestUpdate = (string Device
         client.Headers["Content-Type"]  = "application/json";
         client.Headers["Authorization"] = "Bearer " + Program.Option("NestToken").Value;
 
+        //Program.Notify("Nest Data!", String.Format(NESTURLUPD, Device) + " - " + jsonargs);
         var res = client.UploadString(String.Format(NESTURLUPD, Device),"PUT", jsonargs);
 		return res;
-    } finally {
+    } finally { 
       client.Dispose();
     }
 };
@@ -88,6 +93,7 @@ Func&lt;ModuleHelper, JToken, JToken, bool&gt; refreshThermostat = (thermostat, 
   	var thermostatMode = thermostat.Parameter("Thermostat.Mode");
   	var fanstate = thermostat.Parameter("Thermostat.FanState");
   	var fanmode = thermostat.Parameter("Thermostat.FanMode");
+  	var operatingStateSensor = thermostat.Parameter("Sensor.OperatingState");
   
     thermostat.Parameter("Thermostat.StructureId").Value = thermodata["structure_id"].ToString();
     thermostat.Parameter("Thermostat.ThermostatId").Value = thermodata["device_id"].ToString();
@@ -97,10 +103,21 @@ Func&lt;ModuleHelper, JToken, JToken, bool&gt; refreshThermostat = (thermostat, 
     // State
 	switch (thermodata["hvac_state"].ToString()) {
     	case "heating" :
-       		if (operatingState.Value != "Heating") {
-                operatingState.Value = "Heating";
-          		Program.RaiseEvent(thermostat, "Thermostat.OperatingState", "Heating", EVENT_DESCRIPTION);
-        	}
+		  	if (thermodata["is_using_emergency_heat"].ToString() == "true") {
+      			if (operatingState.Value != "Heating") {
+                	operatingState.Value = "Heating";
+          			Program.RaiseEvent(thermostat, "Thermostat.OperatingState", "Heating", EVENT_DESCRIPTION);
+                	operatingStateSensor.Value = "2";
+          			Program.RaiseEvent(thermostat, "Sensor.OperatingState", "2", ":nopopup:" + EVENT_DESCRIPTION);
+        		}
+          	} else {
+       			if (operatingState.Value != "Heating") {
+                	operatingState.Value = "Heating";
+          			Program.RaiseEvent(thermostat, "Thermostat.OperatingState", "Heating", EVENT_DESCRIPTION);
+                	operatingStateSensor.Value = "1";
+          			Program.RaiseEvent(thermostat, "Sensor.OperatingState", "1", ":nopopup:" + EVENT_DESCRIPTION);
+        		}
+            }
    			if (fanstate.Value != "Running") {
        			fanstate.Value = "Running";
        			Program.RaiseEvent(thermostat, "Thermostat.FanState", "Running", EVENT_DESCRIPTION);
@@ -110,6 +127,8 @@ Func&lt;ModuleHelper, JToken, JToken, bool&gt; refreshThermostat = (thermostat, 
        		if (operatingState.Value != "Cooling") {
        		    operatingState.Value = "Cooling";
           		Program.RaiseEvent(thermostat, "Thermostat.OperatingState", "Cooling", EVENT_DESCRIPTION);
+               	operatingStateSensor.Value = "-1";
+          		Program.RaiseEvent(thermostat, "Sensor.OperatingState", "-1", ":nopopup:" + EVENT_DESCRIPTION);
        		}
    			if (fanstate.Value != "Running") {
       			fanstate.Value = "Running";
@@ -125,6 +144,8 @@ Func&lt;ModuleHelper, JToken, JToken, bool&gt; refreshThermostat = (thermostat, 
 	      		if (operatingState.Value != "Circulate") {
                     operatingState.Value = "Circulate";
           			Program.RaiseEvent(thermostat, "Thermostat.OperatingState", "Circulate", EVENT_DESCRIPTION);
+                 	operatingStateSensor.Value = "0";
+            		Program.RaiseEvent(thermostat, "Sensor.OperatingState", "0", ":nopopup:" + EVENT_DESCRIPTION);
 				}
 	      		if (fanmode.Value != "Circulate") {
                     fanmode.Value = "Circulate";
@@ -138,6 +159,8 @@ Func&lt;ModuleHelper, JToken, JToken, bool&gt; refreshThermostat = (thermostat, 
 	      		if (operatingState.Value != "") {
                     operatingState.Value = "";
     	     		Program.RaiseEvent(thermostat, "Thermostat.OperatingState", "", EVENT_DESCRIPTION);
+                 	operatingStateSensor.Value = "0";
+            		Program.RaiseEvent(thermostat, "Sensor.OperatingState", "0", ":nopopup:" + EVENT_DESCRIPTION);
 				}
 	      		if (fanmode.Value != "Auto") {
                     fanmode.Value = "Auto";
@@ -150,6 +173,8 @@ Func&lt;ModuleHelper, JToken, JToken, bool&gt; refreshThermostat = (thermostat, 
   	var HighSetPoint = thermostat.Parameter("Thermostat.SetPoint.HighSetPoint");
   	var LowSetPoint = thermostat.Parameter("Thermostat.SetPoint.LowSetPoint");
   	var SetPoint = thermostat.Parameter("Thermostat.SetPoint.SetPoint");
+  	var ecoHighSetPoint = thermostat.Parameter("Thermostat.SetPoint.ecoHighSetPoint");
+  	var ecoLowSetPoint = thermostat.Parameter("Thermostat.SetPoint.ecoLowSetPoint");
     
 	if (SetPoint.Value != thermodata["target_temperature_c"].ToString()){
    		SetPoint.Value = thermodata["target_temperature_c"].ToString();
@@ -162,6 +187,14 @@ Func&lt;ModuleHelper, JToken, JToken, bool&gt; refreshThermostat = (thermostat, 
 	if (HighSetPoint.Value != thermodata["target_temperature_high_c"].ToString()){
    		HighSetPoint.Value = thermodata["target_temperature_high_c"].ToString();
    		Program.RaiseEvent(thermostat, "Thermostat.SetPoint.HighSetPoint",HighSetPoint.Value , EVENT_DESCRIPTION);
+	} 
+	if (ecoLowSetPoint.Value != thermodata["eco_temperature_low_c"].ToString()){
+   		ecoLowSetPoint.Value = thermodata["eco_temperature_low_c"].ToString();
+   		Program.RaiseEvent(thermostat, "Thermostat.SetPoint.ecoLowSetPoint",ecoLowSetPoint.Value , EVENT_DESCRIPTION);
+	} 
+	if (ecoHighSetPoint.Value != thermodata["eco_temperature_high_c"].ToString()){
+   		ecoHighSetPoint.Value = thermodata["eco_temperature_high_c"].ToString();
+   		Program.RaiseEvent(thermostat, "Thermostat.SetPoint.ecoHighSetPoint",ecoHighSetPoint.Value , EVENT_DESCRIPTION);
 	} 
     
      // Mode
@@ -184,6 +217,12 @@ Func&lt;ModuleHelper, JToken, JToken, bool&gt; refreshThermostat = (thermostat, 
           		Program.RaiseEvent(thermostat, "Thermostat.Mode", "Cool", EVENT_DESCRIPTION);
         	}
   			break;
+     	case "eco":
+       		if (thermostatMode.Value != "Eco") {
+          		thermostatMode.Value = "Eco";
+          		Program.RaiseEvent(thermostat, "Thermostat.Mode", "Eco", EVENT_DESCRIPTION);
+        	}
+  			break;
      	case "off":
        		if (thermostatMode.Value != "") {
           		thermostatMode.Value = "";
@@ -197,6 +236,13 @@ Func&lt;ModuleHelper, JToken, JToken, bool&gt; refreshThermostat = (thermostat, 
     if (sensortemp.Value != thermodata["ambient_temperature_c"].ToString()){
         sensortemp.Value = thermodata["ambient_temperature_c"].ToString();
        	Program.RaiseEvent(thermostat, "Sensor.Temperature",thermodata["ambient_temperature_c"].ToString(), EVENT_DESCRIPTION);
+    }
+  
+     // humidity
+   	var humidity = thermostat.Parameter("Sensor.Humidity");
+    if (humidity.Value != thermodata["humidity"].ToString()){
+        humidity.Value = thermodata["humidity"].ToString();
+       	Program.RaiseEvent(thermostat, "Sensor.Humidity",thermodata["humidity"].ToString(), EVENT_DESCRIPTION);
     }
   return true;
 };
@@ -215,13 +261,16 @@ When.WebServiceCallReceived(MODULES_DOMAIN_THERMOSTAT,( args ) =&gt; {
             
             	switch (reqs[3]){
               		case "LowSetPoint":
-                		type = "low_";
+                		type = "target_temperature_low_";
               			break;
               		case "HighSetPoint":
-                		type = "high_";
+                		type = "target_temperature_high_";
+              			break;
+              		case "SetPoint":
+                		type = "target_temperature_";
               			break;
             	}
-          		NestUpdate(Device,"target_temperature_" + type + scale,reqs[4],"Float");
+          		NestUpdate(Device, type + scale,reqs[4],"Float");
           		break;
           
           	case "Thermostat.FanModeSet":
@@ -237,7 +286,7 @@ When.WebServiceCallReceived(MODULES_DOMAIN_THERMOSTAT,( args ) =&gt; {
         }
     
 	} catch (Exception e) { 
-        Program.Notify("Nest ERROR!", e.Message);
+        Program.Notify("Nest ERROR! WC Therm", e.Message);
     }
   
    return "{ \"ResponseValue\" : \"OK\"}";
@@ -372,7 +421,8 @@ Func&lt;ModuleHelper, JToken, JToken, bool&gt; refreshCamera = (camera, camerada
   
 	var cameraLastMotionStart = camera.Parameter("Camera.LastMotionStart");
 	var cameraLastMotionEnd   = camera.Parameter("Camera.LastMotionEnd");
-    try {
+    if (cameradata["last_event"] != null) {
+      try {
     	if (cameraLastMotionStart.Value !=  cameradata["last_event"]["start_time"].ToString()){
             if (cameraLastMotionStart.Value !="") {
  	     		cameraLastMotionStart.Value =  cameradata["last_event"]["start_time"].ToString();
@@ -385,18 +435,19 @@ Func&lt;ModuleHelper, JToken, JToken, bool&gt; refreshCamera = (camera, camerada
             }
           
         }
-    } catch (Exception e) { 
+      } catch (Exception e) { 
         Program.Notify("Nest ERROR!", e.Message);
-    }
+      }
 
-    try {
+      try {
     	if (cameraLastMotionEnd.Value !=  cameradata["last_event"]["end_time"].ToString()) {
       		cameraLastMotionEnd.Value =  cameradata["last_event"]["end_time"].ToString();
       		Program.RaiseEvent(camera, "Camera.LastMotionEnd", cameraLastMotionEnd.Value, EVENT_DESCRIPTION);
     	    Program.RaiseEvent(camera, "Sensor.MotionDetect", "0", EVENT_DESCRIPTION);
 	    }
-    } catch (Exception e) { 
+      } catch (Exception e) { 
         Program.Notify("Nest ERROR!", e.Message);
+      }
     }
   
   
@@ -448,6 +499,7 @@ When.WebServiceCallReceived(MODULES_DOMAIN_CONFIG,( args ) =&gt; {
           
    		  case "Connect":
                 SetConnectionState("Disconnecting");
+          		//MyTask.Cancel();
                 Program.Parameter("NestState").Value = "";
 	            Program.Option("NestToken").Value = "";
                 Program.Option("NestState").Value = "";
@@ -500,11 +552,13 @@ Func&lt;string, bool&gt; refreshData = (aData) =&gt;
         if (Structure!= null) {
 	      	if (!refreshStructure(Structure,structure.First(), data["data"]))
 	      	return false;
-          
+            //Program.Notify("Nest Log", "Structure");
+
     	    if (structure.First()["thermostats"] != null)
 			    foreach (var id in structure.First()["thermostats"]){
 		        	T += 1;
 			  		ModuleHelper Thermostat = Modules.InDomain(MODULES_DOMAIN_THERMOSTAT).WithAddress(T.ToString()).Get();
+		            //Program.Notify("Nest Log", "Thermostat");
 		            if (Thermostat != null)
 	    		    	if (!refreshThermostat(Thermostat,data["data"]["devices"]["thermostats"][id.ToString()], data["data"]))
 			    		  	return false;
@@ -514,6 +568,7 @@ Func&lt;string, bool&gt; refreshData = (aData) =&gt;
 			    foreach (var id in structure.First()["smoke_co_alarms"]) {
         			P += 1;
 			  		ModuleHelper Protect = Modules.InDomain(MODULES_DOMAIN_PROTECT).WithAddress(P.ToString()).Get();
+		            //Program.Notify("Nest Log", "Protect");
         		  	if (Protect != null)
         				if (!refreshProtect(Protect,data["data"]["devices"]["smoke_co_alarms"][id.ToString()], data["data"]))
 		    			  	return false;
@@ -523,6 +578,7 @@ Func&lt;string, bool&gt; refreshData = (aData) =&gt;
 	    		foreach (var id in structure.First()["cameras"]) {
 		        	C += 1;
 		          	ModuleHelper Camera = Modules.InDomain(MODULES_DOMAIN_CAMERA).WithAddress(C.ToString()).Get();
+		            //Program.Notify("Nest Log", "Camera");
         		    if (Camera != null)
 	        			if (!refreshCamera(Camera,data["data"]["devices"]["cameras"][id.ToString()], data["data"]))
 			      			return false;
@@ -532,7 +588,19 @@ Func&lt;string, bool&gt; refreshData = (aData) =&gt;
    	return true;
 };
 
-Func&lt;bool&gt; NestStream = () =&gt;{
+
+//Func&lt;System.IO.StreamReader, System.Threading.Tasks.Task&lt;string&gt;&gt; myreaderasync = (reader) =&gt;{
+//  MyTask = reader.ReadLineAsync();
+//  return MyTask;
+//};
+
+//Func&lt;System.IO.StreamReader, string&gt; myreader = (reader) =&gt;{
+//  System.Threading.Tasks.Task&lt;string&gt; myTask = System.Threading.Tasks.Task.Run(() =&gt; myreaderasync(reader));
+//  return myTask.Result;
+////  return reader.ReadLine();
+//};
+
+Func&lt;bool&gt; NestStream = () =&gt;  {
 
   	if (Program.Option("NestToken").Value == "") 
     	return false;
@@ -552,6 +620,7 @@ Func&lt;bool&gt; NestStream = () =&gt;{
 			string line;
     	    using (System.IO.StreamReader reader = new System.IO.StreamReader(stream)) {
                 while (((line = reader.ReadLine())  != null) &amp;&amp; (token == Program.Option("NestToken").Value)) {
+                //while (((line = myreader(reader))  != null) &amp;&amp; (token == Program.Option("NestToken").Value)) {
 		 			if (line != "") {
         	            int x = line.IndexOf(":");
             	        if (x &gt;= 0) {
@@ -572,6 +641,14 @@ Func&lt;bool&gt; NestStream = () =&gt;{
 	                  		Program.Option("NestToken").Value = "";
 							return false;
               			case "keep-alive":
+  							Modules.InDomain(MODULES_DOMAIN_THERMOSTAT ).Each((mod)=&gt;{
+      							if (mod.Parameter("Sensor.Temperature").DecimalValue &gt; 0)
+  									Program.RaiseEvent(mod,"Sensor.Temperature", mod.Parameter("Sensor.Temperature").Value, ":nopopup:" + EVENT_DESCRIPTION);
+  							    if (mod.Parameter("Sensor.Humidity").DecimalValue &gt; 0)
+  									Program.RaiseEvent(mod,"Sensor.Humidity", mod.Parameter("Sensor.Humidity").Value, ":nopopup:" + EVENT_DESCRIPTION);
+			            		Program.RaiseEvent(mod, "Sensor.OperatingState", mod.Parameter("Sensor.OperatingState").Value, ":nopopup:" + EVENT_DESCRIPTION);
+  							    return false;
+  							  });                          
               				break;
                     	default:
 	                  		Program.Notify("Nest Event", aEvent);
@@ -594,7 +671,7 @@ Func&lt;bool&gt; NestStream = () =&gt;{
 // ****************
 while (Program.IsEnabled) {
     try {
-		NestStream();      
+		NestStream();//.RunSynchronously();      
     } catch (Exception e) { 
         Program.Notify("Nest Stream", e.Message);
     }  
@@ -610,8 +687,8 @@ while (Program.IsEnabled) {
   <Description>You will a Nest developer account, and a Product on the Nest developer portal to use this module:</Description>
   <Group>Devices and Things</Group>
   <Features />
-  <ActivationTime>2017-05-24T02:46:23.843126Z</ActivationTime>
-  <TriggerTime>2017-05-24T02:46:24.398242Z</TriggerTime>
+  <ActivationTime xsi:nil="true" />
+  <TriggerTime>2017-05-31T20:26:58.663206Z</TriggerTime>
   <Type>CSharp</Type>
   <IsEnabled>true</IsEnabled>
 </ProgramBlock>
