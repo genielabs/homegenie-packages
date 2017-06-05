@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-16"?>
-<ProgramBlock xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+<ProgramBlock xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
   <ConditionType>OnTrue</ConditionType>
   <Conditions />
   <Commands />
@@ -10,6 +10,7 @@ Program.UseWidget("jkUtils/OpenWeatherMap/OpenWeatherMap");
 Program.AddOption("Location", "Berlin", "City name", "text");
 Program.AddOption("Language", "de", "Language. See http://OpenWeatherMap.org/API for available langugae codes.", "text");
 Program.AddOption("UpdateInterval", "60", "Update interval in minutes. Default is 60 minutes.", "text");
+Program.AddOption("API Key", "1234567890", "Please register to get an API key", "text");
 Program.AddOption("Custom Display Units", "TRUE", "Display System of Units (TRUE = use metric system, FALSE = use imperial system)", "text");
 Program.AddOption("Custom Color", "213", "HUE Color Value", "text");
 Program.AddOption("Custom Zoom", "100%", "Custom Zoom", "text");
@@ -85,9 +86,10 @@ Program.Run();
 Func&lt;bool&gt; _checkWeather = new Func&lt;bool&gt;(()=&gt;{
   Program.RunAsyncTask(()=&gt; {
     string location = Program.Option("Location").Value;
-    string language = Program.Option("Language").Value; 
+    string language = Program.Option("Language").Value;
+    string apikey = Program.Option("API Key").Value;
     string displayCelsius = Program.Option("Custom Display Units").Value;
-    string webserviceurl = "http://api.OpenWeatherMap.org/data/2.5/weather?q="+ location +"&amp;lang=" + language; 
+    string webserviceurl = "http://api.OpenWeatherMap.org/data/2.5/weather?q="+ location +"&amp;lang=" + language +"&amp;APPID=" + apikey;
     TimeSpan t = (DateTime.UtcNow - new DateTime(1970, 1, 1));
     int UTCTimeNow = (int)t.TotalSeconds;
     string UCTTimeNowString = UTCTimeNow.ToString();
@@ -96,7 +98,7 @@ Func&lt;bool&gt; _checkWeather = new Func&lt;bool&gt;(()=&gt;{
 
     try
     {
-      //string last_updated = DateTime.Now.ToString("HH:mm"); 
+      //string last_updated = DateTime.Now.ToString("HH:mm");
 
       if (displayCelsius.ToLower() == "true") {
         webserviceurl = webserviceurl + "&amp;units=metric";
@@ -105,14 +107,14 @@ Func&lt;bool&gt; _checkWeather = new Func&lt;bool&gt;(()=&gt;{
       } else {
         webserviceurl = webserviceurl + "&amp;units=imperial";
         Program.Parameter("jkUtils.OpenWeatherMap.Temp.Label").Value = "°F";
-        Program.Parameter("jkUtils.OpenWeatherMap.Wind.Label").Value = "kph"; 
-      }        
+        Program.Parameter("jkUtils.OpenWeatherMap.Wind.Label").Value = "kph";
+      }
 
-      var data = Net.WebService(webserviceurl).GetData();    
+      var data = Net.WebService(webserviceurl).GetData();
 
-      //check for update in data     
+      //check for update in data
       //if(data.dt.ToString() != Program.Parameter("jkUtils.OpenWeatherMap.Dt").Value ) {
-      if(0 != 1 ) {          
+      if(0 != 1 ) {
 
         Program.Parameter("jkUtils.OpenWeatherMap.Cod").Value = data.cod ?? "";
         Program.Parameter("jkUtils.OpenWeatherMap.Name").Value = data.name ?? "";
@@ -122,7 +124,7 @@ Func&lt;bool&gt; _checkWeather = new Func&lt;bool&gt;(()=&gt;{
         if(data.clouds != null) {
           Program.Parameter("jkUtils.OpenWeatherMap.Clouds.All").Value = data.clouds.all ?? "";
         } else {
-          Program.Parameter("jkUtils.OpenWeatherMap.Clouds.All").Value = ""; 
+          Program.Parameter("jkUtils.OpenWeatherMap.Clouds.All").Value = "";
         }
 
         if(data.rain != null) {
@@ -130,11 +132,11 @@ Func&lt;bool&gt; _checkWeather = new Func&lt;bool&gt;(()=&gt;{
           Program.Parameter("jkUtils.OpenWeatherMap.Rain.H3").Value = data.rain["3h"] ?? "";
           Program.Parameter("jkUtils.OpenWeatherMap.Rain.H24").Value = data.rain["24h"] ?? "";
           Program.Parameter("jkUtils.OpenWeatherMap.Rain.Today").Value = data.rain["today"] ?? "";
-        } else { 
+        } else {
           Program.Parameter("jkUtils.OpenWeatherMap.Rain.H1").Value = "";
           Program.Parameter("jkUtils.OpenWeatherMap.Rain.H3").Value = "";
           Program.Parameter("jkUtils.OpenWeatherMap.Rain.H24").Value = "";
-          Program.Parameter("jkUtils.OpenWeatherMap.Rain.Today").Value = "";         
+          Program.Parameter("jkUtils.OpenWeatherMap.Rain.Today").Value = "";
         }
 
         if(data.snow != null) {
@@ -146,8 +148,8 @@ Func&lt;bool&gt; _checkWeather = new Func&lt;bool&gt;(()=&gt;{
           Program.Parameter("jkUtils.OpenWeatherMap.Snow.H1").Value = "";
           Program.Parameter("jkUtils.OpenWeatherMap.Snow.H3").Value = "";
           Program.Parameter("jkUtils.OpenWeatherMap.Snow.H24").Value = "";
-          Program.Parameter("jkUtils.OpenWeatherMap.Snow.Today").Value = "";           
-        }          
+          Program.Parameter("jkUtils.OpenWeatherMap.Snow.Today").Value = "";
+        }
 
         if(data.wind != null) {
           Program.Parameter("jkUtils.OpenWeatherMap.Wind.Speed").Value = data.wind.speed ?? "";
@@ -156,15 +158,15 @@ Func&lt;bool&gt; _checkWeather = new Func&lt;bool&gt;(()=&gt;{
         } else {
           Program.Parameter("jkUtils.OpenWeatherMap.Wind.Speed").Value = "";
           Program.Parameter("jkUtils.OpenWeatherMap.Wind.Deg").Value = "";
-          Program.Parameter("jkUtils.OpenWeatherMap.Wind.Gust").Value = "";           
+          Program.Parameter("jkUtils.OpenWeatherMap.Wind.Gust").Value = "";
         }
 
         if(data.main != null) {
           if(Program.Parameter("jkUtils.OpenWeatherMap.Main.Pressure").Value != "") {
-            Program.Parameter("jkUtils.OpenWeatherMap.Main.Pressure.Previous").Value = Program.Parameter("jkUtils.OpenWeatherMap.Main.Pressure").Value;           	 
+            Program.Parameter("jkUtils.OpenWeatherMap.Main.Pressure.Previous").Value = Program.Parameter("jkUtils.OpenWeatherMap.Main.Pressure").Value;
           }
           if(Program.Parameter("jkUtils.OpenWeatherMap.Main.Temp").Value != "") {
-            Program.Parameter("jkUtils.OpenWeatherMap.Main.Temp.Previous").Value = Program.Parameter("jkUtils.OpenWeatherMap.Main.Temp").Value;           	 
+            Program.Parameter("jkUtils.OpenWeatherMap.Main.Temp.Previous").Value = Program.Parameter("jkUtils.OpenWeatherMap.Main.Temp").Value;
           }
           Program.Parameter("jkUtils.OpenWeatherMap.Main.Temp").Value = data.main.temp ?? "";
           Program.Parameter("jkUtils.OpenWeatherMap.Main.Humidity").Value = data.main.humidity ?? "";
@@ -183,7 +185,7 @@ Func&lt;bool&gt; _checkWeather = new Func&lt;bool&gt;(()=&gt;{
           Program.Parameter("jkUtils.OpenWeatherMap.Main.PressureSea").Value = "";
           Program.Parameter("jkUtils.OpenWeatherMap.Main.PressureGround").Value = "";
           Program.Parameter("jkUtils.OpenWeatherMap.Main.TempMax").Value = "";
-          Program.Parameter("jkUtils.OpenWeatherMap.Main.TempMin").Value = "";           
+          Program.Parameter("jkUtils.OpenWeatherMap.Main.TempMin").Value = "";
         }
 
         //Program.Parameter("jkUtils.OpenWeatherMap.Base").Value = data["base"] ?? "";
@@ -193,11 +195,11 @@ Func&lt;bool&gt; _checkWeather = new Func&lt;bool&gt;(()=&gt;{
           Program.Parameter("jkUtils.OpenWeatherMap.Weather.Main").Value = data.weather[0].main ?? "";
           Program.Parameter("jkUtils.OpenWeatherMap.Weather.Description").Value = data.weather[0].description ?? "";
           Program.Parameter("jkUtils.OpenWeatherMap.Weather.Icon").Value = data.weather[0].icon ?? "";
-          /* 
-           // Potential fix for problems in recieving JSON UTF encoded data
+          /*
+          // Potential fix for problems in recieving JSON UTF encoded data
 
            Program.Parameter("jkUtils.OpenWeatherMap.Weather.Description").Value = Regex.Replace(
-             			 data.weather[0].description,
+                         data.weather[0].description,
                          @"\\u(?&lt;value&gt;[0-9a-f]{4})",
                          match =&gt; {
                              string digits = match.Groups["value"].Value;
@@ -209,19 +211,19 @@ Func&lt;bool&gt; _checkWeather = new Func&lt;bool&gt;(()=&gt;{
           Program.Parameter("jkUtils.OpenWeatherMap.Weather.Id").Value = "";
           Program.Parameter("jkUtils.OpenWeatherMap.Weather.Main").Value = "";
           Program.Parameter("jkUtils.OpenWeatherMap.Weather.Description").Value = "";
-          Program.Parameter("jkUtils.OpenWeatherMap.Weather.Icon").Value = "";           
+          Program.Parameter("jkUtils.OpenWeatherMap.Weather.Icon").Value = "";
         }
 
         if(data.sys != null) {
           Program.Parameter("jkUtils.OpenWeatherMap.Sys.Message").Value = data.sys.message ?? "";
           Program.Parameter("jkUtils.OpenWeatherMap.Sys.Country").Value = data.sys.country ?? "";
           Program.Parameter("jkUtils.OpenWeatherMap.Sys.Sunrise").Value = data.sys.sunrise ?? "";
-          Program.Parameter("jkUtils.OpenWeatherMap.Sys.Sunset").Value = data.sys.sunset ?? "";        
+          Program.Parameter("jkUtils.OpenWeatherMap.Sys.Sunset").Value = data.sys.sunset ?? "";
         } else {
           Program.Parameter("jkUtils.OpenWeatherMap.Sys.Message").Value = "";
           Program.Parameter("jkUtils.OpenWeatherMap.Sys.Country").Value = "";
           Program.Parameter("jkUtils.OpenWeatherMap.Sys.Sunrise").Value = "";
-          Program.Parameter("jkUtils.OpenWeatherMap.Sys.Sunset").Value = "";                   
+          Program.Parameter("jkUtils.OpenWeatherMap.Sys.Sunset").Value = "";
         }
 
         if(data.coord != null) {
@@ -229,7 +231,7 @@ Func&lt;bool&gt; _checkWeather = new Func&lt;bool&gt;(()=&gt;{
           Program.Parameter("jkUtils.OpenWeatherMap.Coord.Lat").Value = data.coord.lat ?? "";
         } else {
           Program.Parameter("jkUtils.OpenWeatherMap.Coord.Lon").Value = "";
-          Program.Parameter("jkUtils.OpenWeatherMap.Coord.Lat").Value = "";           
+          Program.Parameter("jkUtils.OpenWeatherMap.Coord.Lat").Value = "";
         }
 
         //STENCIL: Program.Parameter("jkUtils.OpenWeatherMap.").Value = data. ?? "";
@@ -238,13 +240,13 @@ Func&lt;bool&gt; _checkWeather = new Func&lt;bool&gt;(()=&gt;{
 
       Program.Notify("jkutils - OpenWeatherMap","Data has been updated.");
       //Program.RaiseEvent("jkUtils.OpenWeatherMap.LastUpdated", UCTTimeNowString, "Updated");
-    } 
-    catch (Exception e) 
-    {                
+    }
+    catch (Exception e)
+    {
       Program.Notify("jkutils - OpenWeatherMap", "Update of data failed.");
       //DEBUG: Program.Notify("OpenWeatherMap ERROR!", e.Message);
       Console.WriteLine( e.Message );
-      //Pause(10);        
+      //Pause(10);
     }
 
 
@@ -252,7 +254,7 @@ Func&lt;bool&gt; _checkWeather = new Func&lt;bool&gt;(()=&gt;{
   });
 
   return true;
-});      
+});
 
 //
 // Web service calls handling
@@ -272,13 +274,13 @@ When.WebServiceCallReceived(Program.Module.Domain + "/" + Program.Module.Address
       _checkWeather();
       break;
     }
-  } 
-  catch (Exception ex) 
-  { 
+  }
+  catch (Exception ex)
+  {
     res = "{ 'ResponseValue' : 'ERROR: " + ex.Message + " " + ex.StackTrace + "' }";
   }
   // unable to process request
-  
+
   return res;
 });
 
@@ -289,16 +291,16 @@ while (Program.IsEnabled)
   //Pause(10);
 }
 </ScriptSource>
-  <ScriptErrors>[]</ScriptErrors>
+  <ScriptErrors />
   <Domain>HomeAutomation.HomeGenie.Automation</Domain>
   <Address>503</Address>
   <Name>jkUtils - OpenWeatherData</Name>
-  <Description>Gathers weather data from http://www.OpenWeatherMap.org/ [API Version 2.5] 
-No service key required to fetch data.</Description>
-  <Group>Weather and Enviroment</Group>
+  <Description>Gathers weather data from http://www.OpenWeatherMap.org/ [API Version 2.5]
+API key required to fetch data.</Description>
+  <Group>Weather and Environment</Group>
   <Features />
-  <ActivationTime xsi:nil="true" />
-  <TriggerTime xsi:nil="true" />
+  <ActivationTime>2017-05-01T11:36:23.810082Z</ActivationTime>
+  <TriggerTime>2017-05-01T11:36:24.804028Z</TriggerTime>
   <Type>CSharp</Type>
   <IsEnabled>false</IsEnabled>
 </ProgramBlock>

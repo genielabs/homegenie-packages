@@ -1,8 +1,8 @@
 # Open Weather
 
-Gathers weather data from <a href="http://www.OpenWeatherMap.org/" target="_blank">OpenWeatherMap</a> [API Version 2.5] 
+Gathers weather data from <a href="http://www.OpenWeatherMap.org/" target="_blank">OpenWeatherMap</a> [API Version 2.5]
 
-No service key required to fetch data.
+API service key required to fetch data.
 
 ## Features
 
