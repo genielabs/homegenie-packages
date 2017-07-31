@@ -1,0 +1,18 @@
+{
+    "author": "Matthieu Tudury (MTU)",
+    "version": "v1.0",
+    "title": "Pushbullet Service",
+    "description": "Give an easy way to use Pushbullet as a messaging service in your own HomeGenie programs",
+    "published": "2017-07-31T00:00:00Z",
+    "sourcecode": "https://github.com/mtudury/homegenie-packages",
+    "homepage": "https://github.com/mtudury/homegenie-packages", 
+    "programs": [
+        { 
+            "file": "1024-ServiceMessagingPushBullet.hgx",
+            "name":"ServiceMessagingPushBullet",
+            "description": "Pushbullet Service : Give an easy way to use Pushbullet as a messaging service in your own HomeGenie programs",
+            "uid": "1024",
+            "group": "Service" 
+        }
+    ]
+}
