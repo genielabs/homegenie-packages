@@ -8,10 +8,10 @@
     "homepage": "https://github.com/mtudury/homegenie-packages", 
     "programs": [
         { 
-            "file": "1024-ServiceMessagingPushBullet.hgx",
+            "file": "ServiceMessagingPushBullet.hgx",
             "name":"ServiceMessagingPushBullet",
             "description": "Pushbullet Service : Give an easy way to use Pushbullet as a messaging service in your own HomeGenie programs",
-            "uid": "1024",
+            "uid": "100901",
             "group": "Service" 
         }
     ]
