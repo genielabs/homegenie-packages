@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-16"?>
+<ProgramBlock xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <ConditionType>OnTrue</ConditionType>
+  <Conditions />
+  <Commands />
+  <ScriptCondition>// no conditional startup
+return true;</ScriptCondition>
+  <ScriptSource>// Sample usage in your programs :
+/*
+
+Thread.Sleep(1000);  // Ensure the service is registered before at startup
+
+dynamic pushbulletService = ProgramDynamicApi.Find("Service/Messaging/PushBullet/v1")("");
+pushbulletService.Send("test", "This is a test Message", "your_pushbullet_api_key");
+
+Program.GoBackground();
+
+*/
+
+dynamic service = new ExpandoObject();
+
+service.PushBulletURL = "https://api.pushbullet.com/v2/pushes";
+
+Action&lt;string, string, string&gt; Send = (subject, message, dest) =&gt; {
+	var key = dest;
+
+	using (var webcli = new System.Net.WebClient())
+	{
+		dynamic json = new ExpandoObject();
+		json.type = "note";
+        json.title = subject;
+        json.body = message;
+		
+		webcli.Headers.Add("content-type", "application/json");
+		webcli.Headers.Add("Authorization", "Bearer " + key);
+		webcli.UploadString(service.PushBulletURL, Newtonsoft.Json.JsonConvert.SerializeObject(json));
+	}
+};
+service.Send = Send;
+
+Func&lt;object, object&gt; toberegistered = (notused) =&gt; {
+  return service;
+};
+
+ProgramDynamicApi.Register("Service/Messaging/PushBullet/v1", toberegistered);
+
+Program.GoBackground();</ScriptSource>
+  <ScriptErrors>[]</ScriptErrors>
+  <Domain>HomeAutomation.HomeGenie.Automation</Domain>
+  <Address>1024</Address>
+  <Name>ServiceMessagingPushBullet</Name>
+  <Description>Register PushBullet Service to be used for Messaging</Description>
+  <Group>Services</Group>
+  <Features />
+  <ActivationTime>2017-07-31T20:01:02.656598Z</ActivationTime>
+  <TriggerTime>2017-07-31T20:01:02.70364Z</TriggerTime>
+  <Type>CSharp</Type>
+  <IsEnabled>true</IsEnabled>
+</ProgramBlock>
