@@ -1,0 +1,18 @@
+{
+    "author": "Matthieu Tudury (MTU)",
+    "version": "v1.0",
+    "title": "Mail Service",
+    "description": "Just a mail service, It's main value is : it can be easily integrated in the SmartMessaging Service",
+    "published": "2017-08-04T00:00:00Z",
+    "sourcecode": "https://github.com/mtudury/homegenie-packages",
+    "homepage": "https://github.com/mtudury/homegenie-packages", 
+    "programs": [
+        { 
+            "file": "ServiceMessagingMail.hgx",
+            "name":"ServiceMessagingMail",
+            "description": "Just a mail service, It's main value is : it can be easily integrated in the SmartMessaging Service",
+            "uid": "100902",
+            "group": "Services" 
+        }
+    ]
+}

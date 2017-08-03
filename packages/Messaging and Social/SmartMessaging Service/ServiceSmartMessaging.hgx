@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="utf-16"?>
+<ProgramBlock xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <ConditionType>OnTrue</ConditionType>
+  <Conditions />
+  <Commands />
+  <ScriptCondition>return true;</ScriptCondition>
+  <ScriptSource>// Sample usage in your programs : Doorbell sample
+/*
+
+SetupScripting : 
+
+Thread.Sleep(1000);  // Wait to Ensure the service is registered before, at homegenie startup
+
+dynamic pusbulletService = ProgramDynamicApi.Find("Service/Messaging/PushBullet/v1")("");
+dynamic mailingService = ProgramDynamicApi.Find("Service/Messaging/Mail/v1")("");
+
+dynamic messagingService = ProgramDynamicApi.Find("Service/Messaging/SmartMessaging/v1")("");
+messagingService.Register("doorbell", pusbulletService, "your_pushbullet_api_key");
+messagingService.Register("doorbell", mailingService, "test@test.com");
+
+Program.GoBackground();
+
+
+In Doorbell script :
+
+When doorbell:
+
+var finder = ProgramDynamicApi.Find("Service/Messaging/SmartMessaging/v1");
+if (finder != null) {
+  dynamic messagingService = finder("");
+  messagingService.Send("Doorbell Information", "Someone made Ding/Dong", "doorbell");
+}
+
+
+*/
+
+dynamic service = new ExpandoObject();
+service.contexts = new Dictionary&lt;String, List&lt;dynamic&gt;&gt;();
+  
+Action&lt;string, string, string&gt; Send = (subject, message, context) =&gt; {
+  if (service.contexts.ContainsKey(context)) {
+    foreach(dynamic ctx in service.contexts[context]) {
+      ctx.Service.Send(subject, message, ctx.Dest);
+    }
+  } else {
+    Program.Notify("ServiceSmartMessaging", "Error: Context "+context+ " was not found, nothing was sent.");
+  }
+};
+service.Send = Send;
+
+
+Action&lt;string, dynamic, string&gt; Register = (context, dstservice, dest) =&gt; {
+  dynamic ctx = new ExpandoObject();
+  ctx.ContextName = context;
+  ctx.Service = dstservice;
+  ctx.Dest = dest;
+  
+  if (!service.contexts.ContainsKey(context))
+    service.contexts.Add(context, new List&lt;dynamic&gt;());
+  
+  service.contexts[context].Add(ctx);
+};
+service.Register = Register;
+
+
+Func&lt;object, object&gt; toberegistered = (notused) =&gt; {
+  return service;
+};
+
+ProgramDynamicApi.Register("Service/Messaging/SmartMessaging/v1", toberegistered);
+
+Program.GoBackground();</ScriptSource>
+  <ScriptErrors>[]</ScriptErrors>
+  <Domain>HomeAutomation.HomeGenie.Automation</Domain>
+  <Address>1026</Address>
+  <Name>ServiceSmartMessaging</Name>
+  <Description>Smarten Messaging services, this service helps making integration of messaging services more flexible in your own scripts.
+
+ Typical usage : 
+- Send a pushbullet notification to two different users.
+- Send a mail and a push notification when an event occur in your scripts.
+
+</Description>
+  <Group>Services</Group>
+  <Features />
+  <ActivationTime>2017-08-03T22:00:59.565537Z</ActivationTime>
+  <TriggerTime>2017-08-03T22:00:59.591278Z</TriggerTime>
+  <Type>CSharp</Type>
+  <IsEnabled>true</IsEnabled>
+</ProgramBlock>

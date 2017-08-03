@@ -1,0 +1,18 @@
+{
+    "author": "Matthieu Tudury (MTU)",
+    "version": "v1.0",
+    "title": "SmartMessaging Service",
+    "description": "Allow to configure scenarios of notifications (Mail + pushbullet for some notifications, 2 pushbullet for some others...), to be used in your own programs",
+    "published": "2017-08-04T00:00:00Z",
+    "sourcecode": "https://github.com/mtudury/homegenie-packages",
+    "homepage": "https://github.com/mtudury/homegenie-packages", 
+    "programs": [
+        { 
+            "file": "ServiceSmartMessaging.hgx",
+            "name":"ServiceSmartMessaging.hgx",
+            "description": "Allow to configure scenarios of notifications (Mail + pushbullet for some notifications, 2 pushbullet for some others...), to be used in your own programs",
+            "uid": "100903",
+            "group": "Services" 
+        }
+    ]
+}
