@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-16"?>
+<ProgramBlock xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <ConditionType>OnTrue</ConditionType>
+  <Conditions />
+  <Commands />
+  <ScriptCondition>// no conditional startup
+Program.Setup(() =&gt; {
+  Program.AddFeature("Light,Dimmer,Switch", "Persona.ToggleOffWhenLeave", "Toggle Off when Leaving");
+  Program.AddFeature("Light,Dimmer,Switch", "Persona.ToggleOnWhenLeave", "Toggle On when Leaving");
+  Program.AddFeature("Light,Dimmer,Switch", "Persona.ToggleOnWhenArriving", "Toggle On when arriving");
+  Program.AddFeature("Light,Dimmer,Switch", "Persona.ToggleOffWhenArriving", "Toggle Off when arriving");
+});
+return true;</ScriptCondition>
+  <ScriptSource>
+
+dynamic service = new ExpandoObject();
+service.Personas = new List&lt;dynamic&gt;();
+
+
+When.WebServiceCallReceived("Service.Persona", (args) =&gt; {
+
+  string[] reqs = ((string)args).Split('/');
+  if (reqs.Length&lt;3)
+    return "{ 'ResponseValue' : 'KO', 'ErrorMessage' : 'Not enough arguments (/api/Service.Persona/1/get)' }";
+  try
+  {
+    string nodeid = reqs[1];
+    string instance = "";
+    string command = reqs[2];
+    switch(command) {
+      case "get":
+        dynamic d = new System.Dynamic.ExpandoObject();
+        d.OverrideValue = Program.InputField("OverrideValue").Value;
+        d.OverrideFor = Program.InputField("OverrideFor").Value;
+        d.AtHome = Program.Parameter("Sensor.AtHome").Value;
+        d.Overrided = Program.Parameter("Sensor.Overrided").Value;
+        d.NbAtHome = Program.Parameter("Sensor.NbAtHome").Value;
+        d.AtHomeOrigin = Program.Parameter("Sensor.AtHomeOrigin").Value;
+        var personnas_infos = new List&lt;dynamic&gt;();
+        foreach (String persona in service.Personas) {
+          dynamic ps = new System.Dynamic.ExpandoObject();
+          ps.name = persona;
+          ps.overto = Program.Parameter("persona.overto."+persona).Value;
+          ps.overfor = Program.Parameter("persona.overfor."+persona).Value;
+          ps.value = Program.Parameter("persona."+persona).Value;
+          personnas_infos.Add(ps);
+        }
+        d.personnas = personnas_infos.ToArray();
+        return Newtonsoft.Json.JsonConvert.SerializeObject(d);
+      case "now":
+        return DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+    }
+    return "{ 'ResponseValue' : 'KO', 'ErrorMessage' : 'Unknow command (/api/MTUAutomation.AtHomeSensor/1/get, /api/MTUAutomation.AtHomeSensor/1/add/date)' }";
+  } catch (Exception e) { 
+
+    Program.Notify("Service.Persona module ERROR!", e.Message);
+    return "{ 'ResponseValue' : 'KO', 'ErrorMessage' : '"+e.ToString().Replace("'", "\\'")+"' }";
+  }  	
+
+});</ScriptSource>
+  <ScriptErrors>[]</ScriptErrors>
+  <Domain>HomeAutomation.HomeGenie.Automation</Domain>
+  <Address>1028</Address>
+  <Name>ServicePersonas</Name>
+  <Description>Integrate in homegenie people in your house, in order to create rules based on personas presence</Description>
+  <Group>Security</Group>
+  <Features />
+  <ActivationTime xsi:nil="true" />
+  <TriggerTime xsi:nil="true" />
+  <Type>CSharp</Type>
+  <IsEnabled>false</IsEnabled>
+</ProgramBlock>
