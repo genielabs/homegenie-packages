@@ -12,7 +12,7 @@
             "name":"ServiceMessagingPushBullet",
             "description": "Pushbullet Service : Give an easy way to use Pushbullet as a messaging service in your own HomeGenie programs",
             "uid": "100901",
-            "group": "Service" 
+            "group": "Services" 
         }
     ]
 }
