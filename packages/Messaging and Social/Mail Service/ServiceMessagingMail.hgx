@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-16"?>
+<ProgramBlock xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <ConditionType>OnTrue</ConditionType>
+  <Conditions />
+  <Commands />
+  <ScriptCondition>// no conditional startup
+Program.Setup(() =&gt; {
+  Program.AddOption("SmtpServer", "127.0.0.1", "Put your SMTP Server name or IP here", "text");
+  Program.AddOption("SmtpPort", "25", "Put your SMTP Server Port here (often 25 or 587)", "text");
+  Program.AddOption("SmtpLogin", "", "Login in case of authenticated SMTP server (leave blank if not)", "text");
+  Program.AddOption("SmtpPwd", "", "Password in case of authenticated SMTP server (leave blank if not)", "text");
+  Program.AddOption("SenderDefaultMailAdress", "mailsender@homegenie.local", "Put your address there", "text");
+});
+return true;</ScriptCondition>
+  <ScriptSource>// Sample usage in your programs :
+/*
+
+Thread.Sleep(1000);  // Ensure the service is registered before at startup
+
+dynamic mailService = ProgramDynamicApi.Find("Service/Messaging/Mail/v1")("");
+mailService.Send("test", "This is a test Message", "destaddress@somedomain.com");
+
+Program.GoBackground();
+
+*/
+
+Func&lt;object, object&gt; toberegistered = (sender) =&gt; {
+  
+  dynamic service = new ExpandoObject();
+  
+  if (String.IsNullOrEmpty(sender as String))
+    service.sender = Program.Option("SenderDefaultMailAdress").Value;
+  else
+    service.sender = sender;
+
+  Action&lt;string, string, string&gt; Send = (subject, message, dest) =&gt; {
+    System.Net.Mail.SmtpClient smtpClient = new System.Net.Mail.SmtpClient(Program.Option("SmtpServer").Value, int.Parse(Program.Option("SmtpPort").Value));
+    if (!((String.IsNullOrEmpty(Program.Option("SmtpLogin").Value))||(String.IsNullOrEmpty(Program.Option("SmtpPwd").Value)))) 
+    {
+    	smtpClient.Credentials = new System.Net.NetworkCredential(Program.Option("SmtpLogin").Value, Program.Option("SmtpPwd").Value);
+    }
+    smtpClient.DeliveryMethod = System.Net.Mail.SmtpDeliveryMethod.Network;
+    smtpClient.EnableSsl = true;
+    System.Net.Mail.MailMessage mail = new System.Net.Mail.MailMessage();
+
+    mail.From = new System.Net.Mail.MailAddress(service.sender);
+    mail.To.Add(new System.Net.Mail.MailAddress(dest));
+    
+    Program.Notify("dest", dest);
+    mail.Subject = subject;
+    mail.Body = message;
+
+    smtpClient.Send(mail);
+  };
+  service.Send = Send;
+  
+  return service;
+};
+
+ProgramDynamicApi.Register("Service/Messaging/Mail/v1", toberegistered);
+
+Program.GoBackground();</ScriptSource>
+  <ScriptErrors>[]</ScriptErrors>
+  <Domain>HomeAutomation.HomeGenie.Automation</Domain>
+  <Address>1027</Address>
+  <Name>ServiceMessagingMail</Name>
+  <Description>Register Mail Service to be used for Messaging</Description>
+  <Group>Services</Group>
+  <Features />
+  <ActivationTime>2017-08-03T22:25:57.893495Z</ActivationTime>
+  <TriggerTime>2017-08-03T22:25:58.40517Z</TriggerTime>
+  <Type>CSharp</Type>
+  <IsEnabled>true</IsEnabled>
+</ProgramBlock>
