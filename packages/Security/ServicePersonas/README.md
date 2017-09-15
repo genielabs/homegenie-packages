@@ -12,7 +12,7 @@ dady.Name = "Dady";
 dady.Room = "Chambre1";
 dady.FollowGlobal = false;
 
-personaService.Personas.Add(Dady);
+personaService.Personas.Add(dady);
 
 dynamic son = new ExpandoObject();
 son.Name = "Alex";
@@ -38,9 +38,9 @@ or register a handler :
 ```csharp
 dynamic personaService = ProgramDynamicApi.Find("Service/Security/Personas/v1")("");
 
-personaService.RegisterEventHandler("Dady", (dynamic, state) => {
+personaService.RegisterEventHandler("Dady", (persona, state) => {
 	if (state == personaService.StateAtHome) {
-		
+		// do some stuff
 	}
 })
 
