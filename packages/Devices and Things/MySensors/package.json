@@ -1,0 +1,19 @@
+{
+    "author": "MySensors",
+    "version": "v2.0",
+    "title": "MySensors Gateway",
+    "description": "MySensors Gateway Serial/Ethernet",
+    "published": "2016-11-10T00:00:00Z",
+    "sourcecode": "",
+    "homepage": "https://www.mysensors.org/", 
+    "widgets": [ ],
+    "programs": [
+        { 
+            "file": "MySensors.hgx",
+            "name":"MySensors Gateway",
+            "description": "MySensors Gateway Serial/Ethernet",
+            "group": "Devices and Things" 
+        }
+    ],
+    "interfaces": [ ]
+}
