@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <ItemType>PackagingProject</ItemType>
+    <ProjectGuid>{22A4C413-4755-4918-8A7D-3D81CE1E973A}</ProjectGuid>
+    <Packages>
+      <Packages>
+        <Package>
+          <Builder>
+            <RootEntry>
+              <path>MIG-RFLink\MIG-RFLink.csproj</path>
+            </RootEntry>
+            <targetFile>MIG-RFLink\MIG-RFLink.zip</targetFile>
+            <platform>Linux</platform>
+            <configuration>Debug</configuration>
+            <ctype>BinariesZipPackageBuilder</ctype>
+          </Builder>
+          <name>Linux Binaries</name>
+        </Package>
+      </Packages>
+    </Packages>
+  </PropertyGroup>
+</Project>

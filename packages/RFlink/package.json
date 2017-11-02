@@ -1,0 +1,32 @@
+{
+    "author": "Gael Le Pennec",
+    "version": "v1.0",
+    "title": "RFLink Widgets",
+    "description": "Adds RFLink control capability to HomeGenie",
+    "published": "2017-10-30T00:00:00Z",
+    "sourcecode": "",
+    "homepage": "", 
+    "widgets": [
+        { 
+            "file": "rflink_remote.zip",
+            "name":"RFLink Remote",
+            "description": "Widget for controlling RFLink devices"
+        }
+    ],
+    "programs": [
+        { 
+            "file": "RFLink_RemoteCreator.hgx",
+            "name":"RFLink RemoteCreator",
+            "description": "RFLink program for add remote RF modules",
+            "uid": "100801",
+            "group": "RFLink" 
+        }
+    ],
+    "interfaces": [
+        { 
+            "file": "MIG-RFLink.zip",
+            "name":"RFLink Service",
+            "description": "RFLink Service as MIG Interface"
+        }
+    ]
+}

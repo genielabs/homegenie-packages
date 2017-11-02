@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<Interface Domain="HomeAutomation.RFLink" AssemblyName="MIG-RFLink.dll" IsEnabled="false" SupportedPlatform="All">
+    <Description>Interface for RFLink Gateway</Description>
+    <Options>
+          <Option Name="Port" Value="/dev/ttyUSB0" />
+          <Option Name="rfdebug" Value="False" />
+          <Option Name="rfudebug" Value="False" />
+          <Option Name="qrfdebug" Value="False" />
+          <Option Name="setRF433" Value="True" />
+          <Option Name="setNodoNRF" Value="False" />
+          <Option Name="setGPIO" Value="False" />
+          <Option Name="NRF24L01_Mode" Value="0" />
+          <Option Name="CC2500_Mode" Value="0" />
+   </Options>
+</Interface>

@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="utf-16"?>
+<ProgramBlock xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <ConditionType>OnSwitchTrue</ConditionType>
+  <Conditions />
+  <Commands />
+  <ScriptCondition>// Put your trigger code logic here.
+// To execute the Code To Run,
+// use a 'return true' or 'return false' otherwise.
+
+// list the program as custom widget
+Program.Setup(()=&gt;{
+  
+//Program.Notify("DEBUG","BEGIN INIT");
+var _moduleDomain = "HomeAutomation.RFLink";
+
+Program.AddOption("ModuleId", "RFLink-0001", "Module Id for create new virtual device","text");
+Program.AddOption("ModuleType", "1", "Module Type [1|2] for Widget with 1 or 2 command","slider:1:2:1");
+
+Program.AddFeature(_moduleDomain, "Switch", "RFLink.ProtocolName", "Protocol Name describe in manual  RFLink manual http://www.rflink.nl/blog2/protref", "text");
+Program.AddFeature(_moduleDomain, "Switch", "RFLink.Id", "Module Adress Destination", "text");
+Program.AddFeature(_moduleDomain, "Switch", "RFLink.Channel", "Channel Number in hexadecimal", "text");
+Program.AddFeature(_moduleDomain, "Switch", "RFLink.On_CommandName", "We can changed with ON/OFF/ALLON/ALLOFF/UP/DOWN/STOP/PAIR/ etc.", "text");
+Program.AddFeature(_moduleDomain, "Switch", "RFLink.Off_CommandName", "We can changed with ON/OFF/ALLON/ALLOFF/UP/DOWN/STOP/PAIR/ etc.", "text");
+  
+// set the widget "program"
+Program.UseWidget ("rflink/remote/creator");
+  
+//Program.Notify("DEBUG","END INIT");
+
+//This program must be run one timeonly
+
+});
+
+
+
+return false;
+</ScriptCondition>
+  <ScriptSource>// CSharp Automation Program Plugin
+// Example for using Helper Classes:
+//Program.Notify("DEBUG","BEGIN PROGRAM");
+var _moduleDomain = "HomeAutomation.RFLink";
+var _moduleAdress = "RFLink-XXXX";
+
+//Generate a New virtual device
+var _id = Program.Option("ModuleId").Value;
+var _type= Program.Option("ModuleType").Value;
+
+string _beginModuleWidget = "rflink/remote/";
+string _endModuleWidget;
+
+switch(_type){
+  case "1":
+  		_endModuleWidget="firerequester";//Just Fire button
+  		break;
+    case "2":
+  		_endModuleWidget="switchrequester";// On and OFF Button
+  		break;
+  	default:
+ 		 Program.Notify(_moduleDomain+".Program Error",$"Unknown module type {_type.ToString()}");
+  		return;
+}
+
+Program.AddVirtualModule(_moduleDomain, _id, "Switch", _beginModuleWidget + _endModuleWidget);   
+Program.Notify(_moduleDomain+".Program Information",_endModuleWidget + " Virtual module has been created with Id: "+  _id +" !!!");
+
+//Program.Notify("DEBUG","END PROGRAM");
+
+return;
+</ScriptSource>
+  <ScriptErrors />
+  <Domain>HomeAutomation.HomeGenie.Automation</Domain>
+  <Address>1000</Address>
+  <Name>RemoteControlerCreator</Name>
+  <Description>Program for create new  virtual module associate with  remote command  widget for RFLink Gateway
+You can ajust properties module after  creation.
+For more details you can read RFLink manual http://www.rflink.nl/blog2/protref  to ajust properties with good values.</Description>
+  <Group>RFLink</Group>
+  <Features>
+    <ProgramFeature>
+      <FieldType>text</FieldType>
+      <ForDomains>HomeAutomation.RFLink</ForDomains>
+      <ForTypes>Switch</ForTypes>
+      <Property>RFLink.ProtocolName</Property>
+      <Description>Protocol Name describe in manual  RFLink manual http://www.rflink.nl/blog2/protref</Description>
+    </ProgramFeature>
+    <ProgramFeature>
+      <FieldType>text</FieldType>
+      <ForDomains>HomeAutomation.RFLink</ForDomains>
+      <ForTypes>Switch</ForTypes>
+      <Property>RFLink.Id</Property>
+      <Description>Module Adress Destination</Description>
+    </ProgramFeature>
+    <ProgramFeature>
+      <FieldType>text</FieldType>
+      <ForDomains>HomeAutomation.RFLink</ForDomains>
+      <ForTypes>Switch</ForTypes>
+      <Property>RFLink.Channel</Property>
+      <Description>Channel Number in hexadecimal</Description>
+    </ProgramFeature>
+    <ProgramFeature>
+      <FieldType>text</FieldType>
+      <ForDomains>HomeAutomation.RFLink</ForDomains>
+      <ForTypes>Switch</ForTypes>
+      <Property>RFLink.On_CommandName</Property>
+      <Description>We can changed with ON/OFF/ALLON/ALLOFF/UP/DOWN/STOP/PAIR/ etc.</Description>
+    </ProgramFeature>
+    <ProgramFeature>
+      <FieldType>text</FieldType>
+      <ForDomains>HomeAutomation.RFLink</ForDomains>
+      <ForTypes>Switch</ForTypes>
+      <Property>RFLink.Off_CommandName</Property>
+      <Description>We can changed with ON/OFF/ALLON/ALLOFF/UP/DOWN/STOP/PAIR/ etc.</Description>
+    </ProgramFeature>
+  </Features>
+  <ActivationTime>2017-10-28T07:36:00.007316Z</ActivationTime>
+  <TriggerTime>2017-10-28T07:35:40.87372Z</TriggerTime>
+  <Type>CSharp</Type>
+  <IsEnabled>true</IsEnabled>
+</ProgramBlock>
