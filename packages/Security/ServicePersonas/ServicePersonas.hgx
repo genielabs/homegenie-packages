@@ -5,10 +5,15 @@
   <Commands />
   <ScriptCondition>// no conditional startup
 Program.Setup(() =&gt; {
-  Program.AddFeature("Light,Dimmer,Switch", "Persona.ToggleOffWhenLeave", "Toggle Off when Leaving");
-  Program.AddFeature("Light,Dimmer,Switch", "Persona.ToggleOnWhenLeave", "Toggle On when Leaving");
-  Program.AddFeature("Light,Dimmer,Switch", "Persona.ToggleOnWhenArriving", "Toggle On when arriving");
-  Program.AddFeature("Light,Dimmer,Switch", "Persona.ToggleOffWhenArriving", "Toggle Off when arriving");
+  Program.UseWidget("mtuautomation/security/personas");
+  
+  Program.AddFeature("", "Light,Dimmer,Switch", "Persona.ToggleOffWhenLeave", "Toggle Off when Leaving", "checkbox");
+  Program.AddFeature("", "Light,Dimmer,Switch", "Persona.ToggleOnWhenLeave", "Toggle On when Leaving", "checkbox");
+  Program.AddFeature("", "Light,Dimmer,Switch", "Persona.ToggleOnWhenArriving", "Toggle On when arriving", "checkbox");
+  Program.AddFeature("", "Light,Dimmer,Switch", "Persona.ToggleOffWhenArriving", "Toggle Off when arriving", "checkbox");
+  
+  Program.AddOption("OverrideFor", "", "OverrideFor - '' or an hours number", "text");
+  Program.AddOption("OverrideValue", "", "OverrideValue - 1 or 0", "text");
 });
 return true;</ScriptCondition>
   <ScriptSource>/// Required Dependencies
@@ -42,6 +47,9 @@ service.LastSeenAtHome = DateTime.Now.AddDays(-1);
 // Anticipation State, used mostly in order to start heating the house while coming back
 service.PreState = service.StateAtHome;
 
+// Init
+service.lastUpdate = new List&lt;String&gt;();
+
 When.WebServiceCallReceived("Service.Persona", (args) =&gt; {
 
   string[] reqs = ((string)args).Split('/');
@@ -55,8 +63,8 @@ When.WebServiceCallReceived("Service.Persona", (args) =&gt; {
     switch(command) {
       case "get":
         dynamic d = new System.Dynamic.ExpandoObject();
-        d.OverrideValue = Program.InputField("OverrideValue").Value;
-        d.OverrideFor = Program.InputField("OverrideFor").Value;
+        d.OverrideValue = Program.Option("OverrideValue").Value;
+        d.OverrideFor = Program.Option("OverrideFor").Value;
         d.AtHome = Program.Parameter("Sensor.AtHome").Value;
         d.Overrided = Program.Parameter("Sensor.Overrided").Value;
         d.NbAtHome = Program.Parameter("Sensor.NbAtHome").Value;
@@ -65,6 +73,11 @@ When.WebServiceCallReceived("Service.Persona", (args) =&gt; {
         return Newtonsoft.Json.JsonConvert.SerializeObject(d);
       case "now":
         return DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+      case "Personas":
+      	return Newtonsoft.Json.JsonConvert.SerializeObject(service.Personas);
+      case "UpdatePersona":
+        service.UpdatePersona(nodeid, reqs[3] == "1");
+        return "{ 'ResponseValue' : 'OK' }";
     }
     return "{ 'ResponseValue' : 'KO', 'ErrorMessage' : 'Unknow command (/api/Service.Persona/1/get)' }";
   } catch (Exception e) { 
@@ -102,26 +115,27 @@ Func&lt;string, bool&gt; processOverrideForParam = (param) =&gt; {
   return processOverrideFor(() =&gt; { return Program.Parameter(param).Value; }, (val) =&gt; { Program.Parameter(param).Value = val; });
 };
 
-Func&lt;string, bool&gt; processOverrideForInputField = (param) =&gt; {
-  return processOverrideFor(() =&gt; { return Program.InputField(param).Value; }, (val) =&gt; { Program.InputField(param).Value = val; });
+Func&lt;string, bool&gt; processOverrideForOption = (param) =&gt; {
+  return processOverrideFor(() =&gt; { return Program.Option(param).Value; }, (val) =&gt; { Program.Option(param).Value = val; });
 };
 
 Action&lt;List&lt;string&gt;&gt; Update = (List&lt;string&gt; atHomePersonnas) =&gt; {
+  service.lastUpdate = atHomePersonnas;
   var OverrideFor = false;
   var previousstate = service.State;
   var previousprestate = service.PreState ;
   try
   {
-    if ((Program.InputField("OverrideValue").Value != "1")&amp;&amp;(Program.InputField("OverrideValue").Value != "0"))
-      Program.InputField("OverrideValue").Value = "1";
+    if ((Program.Option("OverrideValue").Value != "1")&amp;&amp;(Program.Option("OverrideValue").Value != "0"))
+      Program.Option("OverrideValue").Value = "1";
     
     // test l override sur periode
-    if (processOverrideForInputField("OverrideFor"))
+    if (processOverrideForOption("OverrideFor"))
     {
-        Program.RaiseEvent("Sensor.AtHome", Program.InputField("OverrideValue").Value, "");
+        Program.RaiseEvent("Sensor.AtHome", Program.Option("OverrideValue").Value, "");
         Program.Parameter("Sensor.Overrided").Value = "1";
         OverrideFor = true;
-        service.State = Program.InputField("OverrideValue").Value;
+        service.State = Program.Option("OverrideValue").Value;
     }
     else
     {
@@ -137,11 +151,12 @@ Action&lt;List&lt;string&gt;&gt; Update = (List&lt;string&gt; atHomePersonnas) =
       if (!personna.FollowGlobal) {
         var personnaovverided = false;
         var personnavalue = "0";
-        if (processOverrideForParam("personna.overfor."+personna)) {
-          var ovveridevalue = Program.Parameter("personna.overto."+personna).Value;
+        var pname = personna.Name;
+        if (processOverrideForParam("personna.overfor."+pname)) {
+          var ovveridevalue = Program.Parameter("personna.overto."+pname).Value;
           if ((ovveridevalue != "1")&amp;&amp;(ovveridevalue != "0")&amp;&amp;(ovveridevalue != "2")) {
             ovveridevalue = "1";
-            Program.Parameter("personna.overto."+personna).Value = ovveridevalue;
+            Program.Parameter("personna.overto."+pname).Value = ovveridevalue;
           }
           if (ovveridevalue == "2") {
             var curhour = DateTime.Now.Hour;
@@ -156,14 +171,14 @@ Action&lt;List&lt;string&gt;&gt; Update = (List&lt;string&gt; atHomePersonnas) =
           personnavalue = ovveridevalue;
         }
         if (!personnaovverided) {
-          if (atHomePersonnas.Contains(personna)) {
+          if (atHomePersonnas.Contains(pname)) {
             personnavalue = "1";
           }
         }
         if (personnavalue == "1") {
           athomev2calc = "1";
         }
-        Program.RaiseEvent("personna."+personna, personnavalue, "");
+        Program.RaiseEvent("personna."+pname, personnavalue, "");
       }
     }
         
@@ -172,11 +187,12 @@ Action&lt;List&lt;string&gt;&gt; Update = (List&lt;string&gt; atHomePersonnas) =
       if (personna.FollowGlobal) {
         var personnaovverided = false;
         var personnavalue = athomev2calc;
-        if (processOverrideForParam("personna.overfor."+personna)) {
-          var ovveridevalue = Program.Parameter("personna.overto."+personna).Value;
+        var pname = personna.Name;
+        if (processOverrideForParam("personna.overfor."+pname)) {
+          var ovveridevalue = Program.Parameter("personna.overto."+pname).Value;
           if ((ovveridevalue != "1")&amp;&amp;(ovveridevalue != "0")&amp;&amp;(ovveridevalue != "2")) {
             ovveridevalue = "1";
-            Program.Parameter("personna.overto."+personna).Value = ovveridevalue;
+            Program.Parameter("personna.overto."+pname).Value = ovveridevalue;
           }
           if (ovveridevalue == "2") {
             var curhour = DateTime.Now.Hour;
@@ -190,7 +206,7 @@ Action&lt;List&lt;string&gt;&gt; Update = (List&lt;string&gt; atHomePersonnas) =
           personnaovverided = true;
           personnavalue = ovveridevalue;
         }
-        Program.RaiseEvent("personna."+personna, personnavalue, "");
+        Program.RaiseEvent("personna."+pname, personnavalue, "");
       }
     }
     
@@ -212,47 +228,16 @@ Action&lt;List&lt;string&gt;&gt; Update = (List&lt;string&gt; atHomePersonnas) =
     Program.RaiseEvent("Sensor.NbAtHome", atHomePersonnas.Count.ToString(), "");
     Program.RaiseEvent("Sensor.AtHomeOrigin", athomev2origin ? "1" : "0", "");
 
-    
-    // PreState (AtHomeConfort)
-    if ((Program.InputField("OverrideConfortValue").Value == "1")||(Program.InputField("OverrideConfortValue").Value == "0")) {
-      	service.PreState  = Program.InputField("OverrideConfortValue").Value;
-		Program.RaiseEvent("Sensor.AtHomeConfort", Program.InputField("OverrideConfortValue").Value, "");
-      	if (service.State == Program.InputField("OverrideConfortValue").Value) {
-        	Program.InputField("OverrideConfortValue").Value = "";
-      	}
-    } else {
-	    Program.RaiseEvent("Sensor.AtHomeConfort", service.State, "");
-        service.PreState  = service.State;
-    }
-
-    //Program.Notify("AtHomeSensor", "Updated.");
-
-	if (previousstate != service.State)
+	service.PreState = service.State;
+    if (previousstate != service.State)
     {
-      var json = "{\"origin\": \"AtHomeSensor\"}";
-      //var alarmstate = Net.WebService(CancelAlarmURL).AddHeader("Content-Type", "application/json").Post(json).GetData();
-      //if (alarmstate alarmstate.status.alarm) {
-        
-      //}
-      
       if (service.State == "0") {
-        Modules.WithFeature("AtHome.ToggleOffWhenLeave").Off();
-        Modules.WithFeature("AtHome.ToggleOnWhenLeave").On();
+        Modules.WithFeature("Persona.ToggleOffWhenLeave").Off();
+        Modules.WithFeature("Persona.ToggleOnWhenLeave").On();
       } else {
-        Modules.WithFeature("AtHome.ToggleOnWhenArriving").On();
-  		Modules.WithFeature("AtHome.ToggleOffWhenArriving").Off();
+        Modules.WithFeature("Persona.ToggleOnWhenArriving").On();
+  		Modules.WithFeature("Persona.ToggleOffWhenArriving").Off();
       }
-    }
-    
-    if (previousprestate != service.PreState ) {
-      if (service.PreState  == "0") {
-        Modules.WithFeature("AtHomeConfort.ToggleOffWhenLeave").Off();
-        Modules.WithFeature("AtHomeConfort.ToggleOnWhenLeave").On();
-      } else {
-        Modules.WithFeature("AtHomeConfort.ToggleOnWhenArriving").On();
-  		Modules.WithFeature("AtHomeConfort.ToggleOffWhenArriving").Off();
-      }
-      
     }
   } 
   catch (Exception e) 
@@ -267,22 +252,75 @@ Action&lt;List&lt;string&gt;&gt; Update = (List&lt;string&gt; atHomePersonnas) =
 };
 service.Update = Update;
 
-while (Program.IsEnabled)
-{
-  //service.Update(ListADefinir);
-  //
-  Pause(Program.InputField("PollInterval").DecimalValue); // pause 180s (by default) before next check
-  Pause(10);
-}</ScriptSource>
+Action&lt;String, bool&gt; UpdatePersona = (string persona_code, bool atHomeState) =&gt; {
+  var lst = new List&lt;string&gt;(service.lastUpdate);
+  if ((atHomeState)&amp;&amp;(!lst.Contains(persona_code))) {
+    lst.Add(persona_code);
+  } else if ((!atHomeState)&amp;&amp;(lst.Contains(persona_code))) {
+    lst.Remove(persona_code);
+  }
+  service.Update(lst);
+};
+service.UpdatePersona = UpdatePersona;
+
+Func&lt;int, ModuleHelper&gt; CntToAddress = (cnt) =&gt; { return Modules.InDomain("Service.Persona").WithAddress(cnt.ToString()).Get(); };
+service.CntToAddress = CntToAddress;
+
+Action&lt;List&lt;dynamic&gt;&gt; Init = (personas_init) =&gt; {
+  service.Personas = personas_init;
+  
+  Program.RaiseEvent("Personas", Newtonsoft.Json.JsonConvert.SerializeObject(service.Personas), "");
+
+};
+
+service.Init = Init;
+
+Func&lt;object, object&gt; toberegistered = (notused) =&gt; {
+  return service;
+};
+
+ProgramDynamicApi.Register("Service/Security/ServicePersonas/v1", toberegistered);
+
+
+Program.GoBackground();</ScriptSource>
   <ScriptErrors>[]</ScriptErrors>
   <Domain>HomeAutomation.HomeGenie.Automation</Domain>
   <Address>1028</Address>
   <Name>ServicePersonas</Name>
   <Description>Integrate in homegenie people in your house, in order to create rules based on personas presence</Description>
   <Group>Security</Group>
-  <Features />
+  <Features>
+    <ProgramFeature>
+      <FieldType>checkbox</FieldType>
+      <ForDomains />
+      <ForTypes>Light,Dimmer,Switch</ForTypes>
+      <Property>Persona.ToggleOffWhenLeave</Property>
+      <Description>Toggle Off when Leaving</Description>
+    </ProgramFeature>
+    <ProgramFeature>
+      <FieldType>checkbox</FieldType>
+      <ForDomains />
+      <ForTypes>Light,Dimmer,Switch</ForTypes>
+      <Property>Persona.ToggleOnWhenLeave</Property>
+      <Description>Toggle On when Leaving</Description>
+    </ProgramFeature>
+    <ProgramFeature>
+      <FieldType>checkbox</FieldType>
+      <ForDomains />
+      <ForTypes>Light,Dimmer,Switch</ForTypes>
+      <Property>Persona.ToggleOnWhenArriving</Property>
+      <Description>Toggle On when arriving</Description>
+    </ProgramFeature>
+    <ProgramFeature>
+      <FieldType>checkbox</FieldType>
+      <ForDomains />
+      <ForTypes>Light,Dimmer,Switch</ForTypes>
+      <Property>Persona.ToggleOffWhenArriving</Property>
+      <Description>Toggle Off when arriving</Description>
+    </ProgramFeature>
+  </Features>
   <ActivationTime xsi:nil="true" />
-  <TriggerTime xsi:nil="true" />
+  <TriggerTime>2017-11-20T19:51:12.578465Z</TriggerTime>
   <Type>CSharp</Type>
-  <IsEnabled>false</IsEnabled>
+  <IsEnabled>true</IsEnabled>
 </ProgramBlock>
