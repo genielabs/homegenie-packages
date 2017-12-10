@@ -1,0 +1,18 @@
+{
+    "author": "Matthieu Tudury (MTU)",
+    "version": "v1.0",
+    "title": "RuleEngine Service",
+    "description": "Provide a rule engine for your programs",
+    "published": "2017-08-06T00:00:00Z",
+    "sourcecode": "https://github.com/mtudury/homegenie-packages",
+    "homepage": "https://github.com/mtudury/homegenie-packages", 
+    "programs": [
+        { 
+            "file": "ServiceRuleEngine.hgx",
+            "name":"ServicePersonas",
+            "description": "Integrate in homegenie people in your house, in order to create rules based on personas presence",
+            "uid": "100905",
+            "group": "Services" 
+        }
+    ]
+}

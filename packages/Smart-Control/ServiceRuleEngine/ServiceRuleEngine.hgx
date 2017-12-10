@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="utf-16"?>
+<ProgramBlock xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <ConditionType>OnTrue</ConditionType>
+  <Conditions />
+  <Commands />
+  <ScriptCondition>return true;
+
+</ScriptCondition>
+  <ScriptSource>/// ServiceRuleEngine = Provide Rule Engines for your scripts
+
+/// Required Dependencies
+/// 
+
+/// Recommanded Dependencies
+///
+
+/// May Use Dependencies
+///
+
+dynamic service = new ExpandoObject();
+service.contexts = new Dictionary&lt;String, List&lt;dynamic&gt;&gt;();
+  
+Action&lt;string&gt; Register = (context) =&gt; {
+  if (service.contexts.ContainsKey(context)) {
+    service.contexts[context] = new List&lt;dynamic&gt;();
+  } else {
+  	service.contexts.Add(context, new List&lt;dynamic&gt;());
+  }
+};
+service.Register = Register;
+
+
+Action&lt;string, dynamic&gt; AddRule = (context, rule) =&gt; {
+  service.contexts[context].Add(rule);
+};
+service.AddRule = AddRule;
+
+Func&lt;string, dynamic&gt; EvaluateRules = (context) =&gt; {
+  if (!service.contexts.ContainsKey(context))
+    return null;
+  List&lt;dynamic&gt; rules = service.contexts[context];
+  
+  var dtNow = DateTime.Now;
+  var dtNowInt = dtNow.Hour * 100 + dtNow.Minute;
+  var CurrentDayOfWeek = dtNow.DayOfWeek;
+  
+  // sinon on parcours les regles dans l'ordre
+  foreach(dynamic rule in rules) {
+
+    if (((IDictionary&lt;String, Object&gt;)rule).ContainsKey("Evaluate")) {
+      if (!rule.Evaluate(rule, CurrentDayOfWeek, dtNowInt))
+        continue;
+    } else {
+      if (!service.BaseEvaluateRule(rule, CurrentDayOfWeek, dtNowInt))
+        continue;
+    }
+    
+    return rule;
+  }
+  return null;
+};
+service.EvaluateRules = EvaluateRules;
+
+Func&lt;dynamic, DayOfWeek, int, bool&gt; baseEvaluateRule = (rule, CurrentDayOfWeek, dtNowInt) =&gt; {
+      // test le jour, null = tous les jours autorisés
+    if (rule.DaysOfWeek != null) {
+      bool leave = true;
+      foreach(var day in rule.DaysOfWeek) {
+        if (day == CurrentDayOfWeek)
+          leave = false;
+      }
+      if (leave)
+        return false;
+    }
+
+    //test l'heure
+    if (rule.TimeStart &gt; rule.TimeEnd) {
+      // cas de 23h à 6h par exemple
+      if ((dtNowInt &lt; rule.TimeStart)&amp;&amp;(dtNowInt &gt;= rule.TimeEnd))
+        return false;
+    } else {
+      if (dtNowInt &lt; rule.TimeStart)
+        return false;
+      if (dtNowInt &gt;= rule.TimeEnd)
+        return false;
+    }
+
+  return true;
+};
+service.BaseEvaluateRule = baseEvaluateRule;
+
+
+Func&lt;object, object&gt; toberegistered = (notused) =&gt; {
+  return service;
+};
+
+
+ProgramDynamicApi.Register("Service/Tools/ServiceRuleEngine/v1", toberegistered);
+
+Program.GoBackground();</ScriptSource>
+  <ScriptErrors>[]</ScriptErrors>
+  <Domain>HomeAutomation.HomeGenie.Automation</Domain>
+  <Address>1036</Address>
+  <Name>ServiceRuleEngine</Name>
+  <Description>provide a rule engine for your programs</Description>
+  <Group>Services</Group>
+  <Features />
+  <ActivationTime xsi:nil="true" />
+  <TriggerTime>2017-12-09T09:57:16.256372Z</TriggerTime>
+  <Type>CSharp</Type>
+  <IsEnabled>true</IsEnabled>
+</ProgramBlock>
