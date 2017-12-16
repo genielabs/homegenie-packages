@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-16"?>
-<ProgramBlock xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<ProgramBlock xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <ConditionType>OnTrue</ConditionType>
   <Conditions />
   <Commands />
@@ -97,8 +97,8 @@ Func&lt;ModuleHelper, JToken, JToken, bool&gt; refreshThermostat = (thermostat, 
   
     thermostat.Parameter("Thermostat.StructureId").Value = thermodata["structure_id"].ToString();
     thermostat.Parameter("Thermostat.ThermostatId").Value = thermodata["device_id"].ToString();
-    thermostat.Instance.Name = nestdata["structures"][thermodata["structure_id"].ToString()]["name"].ToString() +
-        " - " + thermodata["label"].ToString();
+    thermostat.Instance.Name = nestdata["structures"][thermodata["structure_id"].ToString()]["name"].ToString()
+      +  " - " + thermodata["name"].ToString();
 
     // State
 	switch (thermodata["hvac_state"].ToString()) {
@@ -188,14 +188,14 @@ Func&lt;ModuleHelper, JToken, JToken, bool&gt; refreshThermostat = (thermostat, 
    		HighSetPoint.Value = thermodata["target_temperature_high_c"].ToString();
    		Program.RaiseEvent(thermostat, "Thermostat.SetPoint.HighSetPoint",HighSetPoint.Value , EVENT_DESCRIPTION);
 	} 
-	if (ecoLowSetPoint.Value != thermodata["eco_temperature_low_c"].ToString()){
-   		ecoLowSetPoint.Value = thermodata["eco_temperature_low_c"].ToString();
-   		Program.RaiseEvent(thermostat, "Thermostat.SetPoint.ecoLowSetPoint",ecoLowSetPoint.Value , EVENT_DESCRIPTION);
-	} 
-	if (ecoHighSetPoint.Value != thermodata["eco_temperature_high_c"].ToString()){
-   		ecoHighSetPoint.Value = thermodata["eco_temperature_high_c"].ToString();
-   		Program.RaiseEvent(thermostat, "Thermostat.SetPoint.ecoHighSetPoint",ecoHighSetPoint.Value , EVENT_DESCRIPTION);
-	} 
+//	if (ecoLowSetPoint.Value != thermodata["eco_temperature_low_c"].ToString()){
+//   		ecoLowSetPoint.Value = thermodata["eco_temperature_low_c"].ToString();
+//   		Program.RaiseEvent(thermostat, "Thermostat.SetPoint.ecoLowSetPoint",ecoLowSetPoint.Value , EVENT_DESCRIPTION);
+//	} 
+//	if (ecoHighSetPoint.Value != thermodata["eco_temperature_high_c"].ToString()){
+//   		ecoHighSetPoint.Value = thermodata["eco_temperature_high_c"].ToString();
+//   		Program.RaiseEvent(thermostat, "Thermostat.SetPoint.ecoHighSetPoint",ecoHighSetPoint.Value , EVENT_DESCRIPTION);
+//	} 
     
      // Mode
      switch (thermodata["hvac_mode"].ToString()) {
@@ -680,15 +680,15 @@ while (Program.IsEnabled) {
 }
 
 </ScriptSource>
-  <ScriptErrors />
+  <ScriptErrors>[]</ScriptErrors>
   <Domain>HomeAutomation.HomeGenie.Automation</Domain>
-  <Address>100201</Address>
+  <Address>1000</Address>
   <Name>Nest Control</Name>
   <Description>You will a Nest developer account, and a Product on the Nest developer portal to use this module:</Description>
-  <Group>Devices and Things</Group>
+  <Group>ERX</Group>
   <Features />
-  <ActivationTime xsi:nil="true" />
-  <TriggerTime>2017-05-31T20:26:58.663206Z</TriggerTime>
+  <ActivationTime>2017-12-16T04:52:33.565753Z</ActivationTime>
+  <TriggerTime>2017-12-16T04:52:35.377978Z</TriggerTime>
   <Type>CSharp</Type>
   <IsEnabled>true</IsEnabled>
 </ProgramBlock>
