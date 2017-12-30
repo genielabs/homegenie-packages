@@ -1,8 +1,33 @@
-# RuleEngine Service #
+# RuleEngine Switchs #
 
-This is a rule engine to be used in your own scripts
+This script requires RuleEngineService dependency
+
+Typical scenario why I created this tool :
+- Switch on the christmas tree depending on : 
+   - we are at home (using an automated service personas)
+   - but not the night (time based)
+   - startup time depends on holiday or not (but time is dynamic depending on a Calendar Module)
+
+- Reboot the FAI Box to get updates only once by month if we are at home
+
+- Switch on a radiator/heater depending on we are at home and the room temperature is below a time based value
+
+How to use :
+Create a script with your rules (see samples below)
+
+Add a RuleEngineSwitch module to a Group.
+Configure the fields :
+- Rule Name : The name of the rule as created in the switch
+- Output : The switch/light module name that will be crontolled by rules
+
+Then enable the RuleEngineSwitch module
+
+The destination switch/light will be controlled by your rules
+
 
 Sample C# Setup script to initialise some rules :
+
+Create a new csharp script
 
 ```csharp
   Thread.Sleep(2000);  // Ensure the service is registered before startup
@@ -87,35 +112,5 @@ Sample C# Setup script to initialise some rules :
   defaultrulefreebox.DaysOfWeek = null;
   defaultrulefreebox.Value = 255;
   RuleEngineService.AddRule("ComplexSchedule.RebootFreebox", defaultrulefreebox);
-
-```
-
-Then to use the ruleengine here's a sample :
-
-
-```csharp
-
-  Thread.Sleep(2000);  // Ensure the service is registered before at startup
-
-
-// do the job
-while (Program.IsEnabled)
-{
-  dynamic RuleEngineService = ProgramDynamicApi.Find("Service/Tools/ServiceRuleEngine/v1")("");
-
-  var destModule = Modules.WithName("PriseFreebox").Get();
-  if (destModule.Exists) {
-	dynamic rule = RuleEngineService.EvaluateRules("ComplexSchedule.RebootFreebox");  // here we evaluate all rules, the selected rule will be returned
-	if (rule != null) {
-		if ((rule.Value == 0) && (destModule.Parameter("Status.Level").Value == "1" )) {
-			destModule.Off();
-		} else if ((rule.Value > 0) && (destModule.Parameter("Status.Level").Value == "0" )) {
-			destModule.On();
-		}
-	}
-  }
-  //
-  Pause(30);
-}
 
 ```
