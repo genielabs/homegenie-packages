@@ -1,6 +1,8 @@
 # Homegenie Packages
 
-Packages repository of user-contributed Automation Programs, Widgets and MIG Interfaces
+Packages repository of user-contributed Automation Programs, Widgets and MIG Interfaces for [HomeGenie](https://github.com/genielabs/HomeGenie).
+
+![HomeGenie Package Repository Browser](https://genielabs.github.io/HomeGenie/images/docs/package_repos.jpg)
 
 ## Contributing
 
