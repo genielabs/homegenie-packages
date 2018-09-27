@@ -13,23 +13,25 @@ int ledsCount = (int)Program.Option("LedsCount").DecimalValue;
 // Grove RGB modules
 var rgbModules = Modules.InDomain(appDomain);
 // Grove RGB Led GPIO settings
-var driver = new FileGpioConnectionDriver();
+//var driver = new FileGpioConnectionDriver();
+var driver = new GpioConnectionDriver();
 var gpioOut1 = new GpioOutputBinaryPin(driver, ConnectorPin.P1Pin13.ToProcessor());
 var gpioOut2 = new GpioOutputBinaryPin(driver, ConnectorPin.P1Pin07.ToProcessor());
 var groveRgb = new GroveRgbConnection(gpioOut1, gpioOut2, ledsCount);
 // Allocate virtual modules for this app
 Program.AddVirtualModules(appDomain, "Dimmer", "homegenie/generic/colorlight", 1, ledsCount);
+// Default delay
+double defaultDelay = 500;
 
-double defaultDelay = 100;
-var instlock = new ManualResetEvent[ledsCount];
-var syncher = new object();
+// State object
+var timings = new dynamic[ledsCount];
 
 var GetHsb = new Func&lt;string,dynamic&gt;((hsb)=&gt;{
   dynamic color = new ExpandoObject();
   string[] parts = hsb.Split(',');
-  color.H = double.Parse(parts[0] != "" ? parts[0] : "1");
-  color.S = double.Parse(parts.Length &gt; 1 &amp;&amp; parts[1] != "" ? parts[1] : "0");
-  color.B = double.Parse(parts.Length &gt; 2 &amp;&amp; parts[2] != "" ? parts[2] : "1");
+  color.H = double.Parse(parts[0] != "" ? parts[0] : "1", CultureInfo.InvariantCulture);
+  color.S = double.Parse(parts.Length &gt; 1 &amp;&amp; parts[1] != "" ? parts[1] : "0", CultureInfo.InvariantCulture);
+  color.B = double.Parse(parts.Length &gt; 2 &amp;&amp; parts[2] != "" ? parts[2] : "1", CultureInfo.InvariantCulture);
   return color;
 });
 
@@ -38,47 +40,63 @@ var GetValueAt = new Func&lt;double,double,double,double,double&gt;((from, to, d
   return from+(range/duration*offset);
 });
 
-var setColor = new Func&lt;int,dynamic,double,bool&gt;((lednumber, color, duration)=&gt;{
-  var module = rgbModules.WithAddress((lednumber+1).ToString()).Get();
-  if (instlock[lednumber] == null)
-    instlock[lednumber] = new ManualResetEvent(true);
-  instlock[lednumber].WaitOne(500);
-  instlock[lednumber].Reset();
-  {
-    var t = new Thread(()=&gt;{
-
-      var currentColor = GetHsb(module.Parameter("Status.ColorHsb").Value);
-      var stopwatch = new System.Diagnostics.Stopwatch();
-      stopwatch.Start();
-      try 
-      {
-        do
-        {
-          lock(syncher)
-          {
-            if (stopwatch.Elapsed.TotalMilliseconds &lt;= duration) 
-            {
-              var h = GetValueAt(currentColor.H, color.H, duration, stopwatch.Elapsed.TotalMilliseconds);
-              var s = GetValueAt(currentColor.S, color.S, duration, stopwatch.Elapsed.TotalMilliseconds);
-              var v = GetValueAt(currentColor.B, color.B, duration, stopwatch.Elapsed.TotalMilliseconds);
+var updateLeds = new Func&lt;bool&gt;(()=&gt;{
+  bool iterateNext;
+  while(Program.IsRunning) {
+    do {
+      iterateNext = false;
+      for(int lednumber = 0; lednumber &lt; ledsCount; lednumber++) {
+	  	lock (timings[lednumber]) {
+          var item = timings[lednumber];
+          if (item == null || item.timeEnd == null) continue;
+          var timeSpan = new TimeSpan(item.timeEnd.Ticks-DateTime.Now.Ticks);
+          if (timeSpan.TotalMilliseconds &gt; 0 &amp;&amp; timeSpan.TotalMilliseconds &lt;= item.duration) {
+            var h = GetValueAt(item.currentColor.H, item.color.H, item.duration, item.duration-timeSpan.TotalMilliseconds);
+            var s = GetValueAt(item.currentColor.S, item.color.S, item.duration, item.duration-timeSpan.TotalMilliseconds);
+            var v = GetValueAt(item.currentColor.B, item.color.B, item.duration, item.duration-timeSpan.TotalMilliseconds);
+            var t = new Thread(()=&gt;{
               groveRgb.SetColor(lednumber, RgbColor.FromHsv(h, s, v));
+            });
+            t.Start();
+            if (!t.Join(3500)) {
+              Program.Notify("Grove RGB ERROR:A", "I/O error");
+              t.Abort();
             }
-            else 
-            {
-              groveRgb.SetColor(lednumber, RgbColor.FromHsv(color.H, color.S, color.B));
-              Pause(0.010);
-              break;
-            }
+            iterateNext = true;
+            //groveRgb.SetColor(lednumber, RgbColor.FromHsv(h, s, v));
+            //iterateNext = true;
+          } else if (timeSpan.TotalMilliseconds &lt;= 0) {
+            var t = new Thread(()=&gt;{
+              groveRgb.SetColor(lednumber, RgbColor.FromHsv(item.color.H, item.color.S, item.color.B));
+            });
+            t.Start();
+            if (!t.Join(3500)) {
+              Program.Notify("Grove RGB ERROR:A", "I/O error\n"+Math.Round(item.color.H, 5));
+              t.Abort();
+            } else item.timeEnd = null;
+            //groveRgb.SetColor(lednumber, RgbColor.FromHsv(item.color.H, item.color.S, item.color.B));
           }
-          Pause(0.010);
-        } while (true);
+  		}
       }
-      catch {}
-      instlock[lednumber].Set();
-    });
-    t.Start();
+    } while (iterateNext &amp;&amp; Program.IsRunning);
+    Pause(0.200);
   }
-  //t.Join();
+  return true;
+});
+
+var setColor = new Func&lt;int,dynamic,double,bool&gt;((lednumber, color, duration)=&gt;{
+  lock (timings[lednumber]) {
+    var item = timings[lednumber];
+    item.currentColor = GetHsb(item.module.Parameter("Status.ColorHsb").Value);
+    if (item.module.Level == 0) {
+      item.currentColor.H = 0;
+      item.currentColor.S = 1;
+      item.currentColor.B = 0;
+    }
+    item.color = color;
+    item.duration = duration;
+    item.timeEnd = DateTime.Now.AddMilliseconds(duration);
+  }
   return true;
 });
 
@@ -95,6 +113,8 @@ for(int x = 0; x &lt; ledsCount; x++)
   {
     currentColor.B = 0d;
   }
+  var item = timings[x] = new ExpandoObject();
+  item.module = rgbModules.WithAddress((x+1).ToString()).Get();
   setColor(x, currentColor, defaultDelay);
 }
 
@@ -106,9 +126,9 @@ When.ProgramStopping(()=&gt;{
 
 // API calls handling
 When.WebServiceCallReceived(appDomain, ( args ) =&gt; {
-  var apiCall = Program.ParseApiCall(args.ToString());
   try
   {
+    var apiCall = Program.ParseApiCall(args.ToString());
     string lightnumber = apiCall.Address;
     var module = rgbModules.WithAddress(lightnumber).Get();
     int lightId = int.Parse(lightnumber) - 1;
@@ -117,7 +137,7 @@ When.WebServiceCallReceived(appDomain, ( args ) =&gt; {
     {
       // eg. http://&lt;hg_address&gt;/api/HomeAutomation.GroveRGB/&lt;light_number&gt;/Control.On
       case "Control.On":
-        setColor(lightId, currentColor, 0);
+        setColor(lightId, currentColor, defaultDelay);
         Program.RaiseEvent(module, "Status.Level", currentColor.B.ToString(), "Groove RGB Led");
         Program.RaiseEvent(module, "Status.ColorHsb", module.Parameter("Status.ColorHsb").Value, "Color Light");
         break;
@@ -147,7 +167,7 @@ When.WebServiceCallReceived(appDomain, ( args ) =&gt; {
         setColor(lightId, currentColor, defaultDelay);
         Program.RaiseEvent(module, "Status.Level", level.ToString(), "Groove RGB Led");
         break;
-      // eg. http://&lt;hg_address&gt;/api/HomeAutomation.PhilipsHue/&lt;light_number&gt;/Control.ColorHsb/&lt;hue&gt;,&lt;sat&gt;,&lt;bri&gt;
+      // eg. http://&lt;hg_address&gt;/api/HomeAutomation.GroveRGB/&lt;led_number&gt;/Control.ColorHsb/&lt;hue&gt;,&lt;sat&gt;,&lt;bri&gt;
       case "Control.ColorHsb":
         string[] values = apiCall.GetOption(0).Split(',');
         double transition = defaultDelay;
@@ -158,18 +178,20 @@ When.WebServiceCallReceived(appDomain, ( args ) =&gt; {
         Program.RaiseEvent(module, "Status.ColorHsb", apiCall.GetOption(0), "Color Light");
         break; 
     }
-    return new ResponseText("OK");
+    return new ResponseText("OK "+module.Parameter("Status.ColorHsb").Value+"  --  "+currentColor.H);
+    //return timings;
   } 
   catch (Exception e) 
   { 
-    Program.Notify("Grove RGB ERROR!", e.Message);
+    Program.Notify("Grove RGB ERROR:2", e.Message);
   }
   return new ResponseText("ERROR");
 }); 
 
-
-Program.GoBackground();</ScriptSource>
-  <ScriptErrors>[]</ScriptErrors>
+// Start leds driver thread
+updateLeds();
+</ScriptSource>
+  <ScriptErrors />
   <Domain>HomeAutomation.HomeGenie.Automation</Domain>
   <Address>62</Address>
   <Name>Grove - Chainable RGB Led</Name>
@@ -177,8 +199,9 @@ Program.GoBackground();</ScriptSource>
 http://www.seeedstudio.com/wiki/Grove_-_Chainable_RGB_LED</Description>
   <Group>Raspberry Pi</Group>
   <Features />
-  <ActivationTime>2016-11-26T13:55:19.56752Z</ActivationTime>
-  <TriggerTime>2016-11-26T13:55:20.056705Z</TriggerTime>
+  <AutoRestartEnabled>false</AutoRestartEnabled>
+  <ActivationTime>2018-09-25T16:20:50.15373Z</ActivationTime>
+  <TriggerTime>2018-09-25T16:20:50.377856Z</TriggerTime>
   <Type>CSharp</Type>
   <IsEnabled>true</IsEnabled>
 </ProgramBlock>
