@@ -1,4 +1,4 @@
-# Welcome to the Homegenie Package Repository
+# Welcome to the HomeGenie Package Repository
 
 A collection of user-contributed Automation Programs, Widgets and MIG Interfaces for extending HomeGenie functionalities.
 
