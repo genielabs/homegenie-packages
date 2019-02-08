@@ -4,17 +4,32 @@
   <Conditions />
   <Commands />
   <ScriptCondition>Program.Setup(()=&gt;{
-    Program.AddInputField("WeMo.IPAddress1", "", "1. IP Address of WeMo Switch 1");
-    Program.AddInputField("WeMo.Refresh", "", "2. Time in seconds between each refresh");
-    Program.AddInputField("WeMo.AlarmAD", "", "3. Activate the activation/désactivation with alarm (1 else 0)");
-
-  	Program.AddVirtualModule("HomeAutomation.WeMo", "1", "Switch", "homegenie/generic/switch");
+    Program.AddInputField("WeMo.Refresh", "60", "1. Time in seconds between each refresh");
+    Program.AddInputField("WeMo.AlarmAD", "0", "2. Activate the activation/d??sactivation with alarm (1 else 0)");
+    Program.AddInputField("WeMo.IPAddress1", "", "3. IP Address of WeMo Switch 1");
+    Program.AddInputField("WeMo.IPAddress2", "", "4. IP Address of WeMo Switch 2");
+    Program.AddInputField("WeMo.IPAddress3", "", "5. IP Address of WeMo Switch 3");
+    Program.AddInputField("WeMo.IPAddress4", "", "6. IP Address of WeMo Switch 4");
+    Program.AddInputField("WeMo.IPAddress5", "", "7. IP Address of WeMo Switch 5");
+    Program.AddInputField("WeMo.IPAddress6", "", "8. IP Address of WeMo Switch 6");
+    Program.AddInputField("WeMo.IPAddress7", "", "9. IP Address of WeMo Switch 7");
+//  	Program.AddInputField("WeMo.IPAddress2", "", "4. IP Address of WeMo Switch 2"); //(Add)
+	
+//  	Program.AddVirtualModule("HomeAutomation.WeMo", "1", "Switch", "homegenie/generic/switch");
+//  	Program.AddVirtualModule("HomeAutomation.WeMo", "2", "Switch", "homegenie/generic/switch"); //(Add)
 });
 
 return true;</ScriptCondition>
-  <ScriptSource>var WeMo_IPAddress1 = Program.InputField("WeMo.IPAddress1").Value;
+  <ScriptSource>var nombrewemo = 7;
 var WeMo_AlarmAD = Program.InputField("WeMo.AlarmAD").Value;
 var WeMo_Refresh = Program.InputField("WeMo.Refresh").DecimalValue;
+var IPAddress = "";
+int indice;
+for (indice = 1; indice &lt;= nombrewemo; indice++)
+{
+  if (!string.IsNullOrEmpty(Program.InputField(String.Format("WeMo.IPAddress{0}", indice.ToString())).Value)) { 
+    Program.AddVirtualModule("HomeAutomation.WeMo", indice.ToString(), "Switch", "homegenie/generic/switch"); }
+}
 Action&lt;string,string&gt; 
 Switchhhh = (string AddressIP, string ONOFF) =&gt; {
 if ( ONOFF == "on") {
@@ -40,12 +55,20 @@ When.ModuleParameterChanged( (module, parameter) =&gt;
   if (WeMo_AlarmAD == "1") {
     if (module.Is("Security Alarm System") &amp;&amp; parameter.Is("Status.Level") &amp;&amp; parameter.Value == "1")
     {
-        Switchhhh(WeMo_IPAddress1,"on");
+    for (indice = 1; indice &lt;= nombrewemo; indice++)
+    {
+      string wemoip = Program.InputField(String.Format("WeMo.IPAddress{0}", indice.ToString())).Value;
+      if (!string.IsNullOrEmpty(wemoip)) {Switchhhh(wemoip,"on");}
+    }
         return false;
     }
     if (module.Is("Security Alarm System") &amp;&amp; parameter.Is("Status.Level") &amp;&amp; parameter.Value == "0")
     {
-        Switchhhh(WeMo_IPAddress1,"off");
+    for (indice = 1; indice &lt;= nombrewemo; indice++)
+    {
+      string wemoip = Program.InputField(String.Format("WeMo.IPAddress{0}", indice.ToString())).Value;
+      if (!string.IsNullOrEmpty(wemoip)) {Switchhhh(wemoip,"off");}
+    }
         return false;
     }
   }
@@ -60,16 +83,16 @@ When.WebServiceCallReceived("HomeAutomation.WeMo", (args) =&gt; {
       string command = reqs[2];
       
       var virtualMod = Modules.InDomain("HomeAutomation.WeMo").WithAddress(switchnumber).Get();
-      
+
       switch(command)
       {
             case "Control.On":
                 Program.RaiseEvent(virtualMod,"Status.Level","100","WeMo");
-        		Switchhhh(WeMo_IPAddress1,"on");
+				Switchhhh(Program.InputField(String.Format("WeMo.IPAddress{0}", switchnumber)).Value,"on");
                 break;
             case "Control.Off":
                 Program.RaiseEvent(virtualMod,"Status.Level","0","WeMo");
-        		Switchhhh(WeMo_IPAddress1,"off");
+				Switchhhh(Program.InputField(String.Format("WeMo.IPAddress{0}", switchnumber)).Value,"off");
                 break;
       }
     } catch (Exception e) {
@@ -83,14 +106,19 @@ When.WebServiceCallReceived("HomeAutomation.WeMo", (args) =&gt; {
 });
 while (Program.IsEnabled)
 {
+for (indice = 1; indice &lt;= nombrewemo; indice++)
+{
+string wemoip = Program.InputField(String.Format("WeMo.IPAddress{0}", indice.ToString())).Value;
+
+if (!string.IsNullOrEmpty(wemoip)) {
   try {
-  var request2 = Net.WebService("http://"+WeMo_IPAddress1+":49153/upnp/control/basicevent1")
+  var request2 = Net.WebService("http://"+wemoip+":49153/upnp/control/basicevent1")
     .AddHeader("Accept", "")
     .AddHeader("Content-type", "text/xml; charset=\"utf-8\"")
     .AddHeader("SOAPACTION", "\"urn:Belkin:service:basicevent:1#GetBinaryState\"")
     .Post("&lt;?xml version=\"1.0\" encoding=\"utf-8\"?&gt;&lt;s:Envelope xmlns:s=\"http://schemas.xmlsoap.org/soap/envelope/\" s:encodingStyle=\"http://schemas.xmlsoap.org/soap/encoding/\"&gt;&lt;s:Body&gt;&lt;u:GetBinaryState xmlns:u=\"urn:Belkin:service:basicevent:1\"&gt;&lt;BinaryState&gt;1&lt;/BinaryState&gt;&lt;/u:GetBinaryState&gt;&lt;/s:Body&gt;&lt;/s:Envelope&gt;");
   var result2 = request2.GetData();
-  var virtualMod = Modules.InDomain("HomeAutomation.WeMo").WithAddress("1").Get();
+  var virtualMod = Modules.InDomain("HomeAutomation.WeMo").WithAddress(indice.ToString()).Get();
   if (result2.Contains("1")) {
 	if (virtualMod.IsOff) {
       Program.RaiseEvent(virtualMod,"Status.Level","100","WeMo");
@@ -104,18 +132,20 @@ while (Program.IsEnabled)
 	} catch (Exception e) {
     	Program.Notify("HomeAutomation.WeMo ERROR!", e.Message);
     }
+}
+}
   Pause(WeMo_Refresh);
 }
 Program.GoBackground();</ScriptSource>
-  <ScriptErrors />
+  <ScriptErrors>[]</ScriptErrors>
   <Domain>HomeAutomation.HomeGenie.Automation</Domain>
-  <Address>1038</Address>
+  <Address>1014</Address>
   <Name>WeMo</Name>
   <Description />
-  <Group>MyScripts</Group>
+  <Group>test</Group>
   <Features />
-  <ActivationTime>2015-11-12T20:17:18.274045Z</ActivationTime>
-  <TriggerTime>2015-11-12T20:17:19.692653Z</TriggerTime>
+  <ActivationTime xsi:nil="true" />
+  <TriggerTime xsi:nil="true" />
   <Type>CSharp</Type>
-  <IsEnabled>true</IsEnabled>
+  <IsEnabled>false</IsEnabled>
 </ProgramBlock>
