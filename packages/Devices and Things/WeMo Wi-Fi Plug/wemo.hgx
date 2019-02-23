@@ -4,30 +4,26 @@
   <Conditions />
   <Commands />
   <ScriptCondition>Program.Setup(()=&gt;{
-    Program.AddInputField("WeMo.Refresh", "60", "1. Time in seconds between each refresh");
-    Program.AddInputField("WeMo.AlarmAD", "0", "2. Activate the activation/d??sactivation with alarm (1 else 0)");
-    Program.AddInputField("WeMo.IPAddress1", "", "3. IP Address of WeMo Switch 1");
-    Program.AddInputField("WeMo.IPAddress2", "", "4. IP Address of WeMo Switch 2");
-    Program.AddInputField("WeMo.IPAddress3", "", "5. IP Address of WeMo Switch 3");
-    Program.AddInputField("WeMo.IPAddress4", "", "6. IP Address of WeMo Switch 4");
-    Program.AddInputField("WeMo.IPAddress5", "", "7. IP Address of WeMo Switch 5");
-    Program.AddInputField("WeMo.IPAddress6", "", "8. IP Address of WeMo Switch 6");
-    Program.AddInputField("WeMo.IPAddress7", "", "9. IP Address of WeMo Switch 7");
-//  	Program.AddInputField("WeMo.IPAddress2", "", "4. IP Address of WeMo Switch 2"); //(Add)
-	
-//  	Program.AddVirtualModule("HomeAutomation.WeMo", "1", "Switch", "homegenie/generic/switch");
-//  	Program.AddVirtualModule("HomeAutomation.WeMo", "2", "Switch", "homegenie/generic/switch"); //(Add)
+    Program.AddOption("WeMo.Refresh", "60", "1. Time in seconds between each refresh", "text");
+    Program.AddOption("WeMo.AlarmAD", "0", "2. Activate the activation/d??sactivation with alarm (1 else 0)", "text");
+    Program.AddOption("WeMo.IPAddress1", "", "3. IP Address of WeMo Switch 1", "text");
+    Program.AddOption("WeMo.IPAddress2", "", "4. IP Address of WeMo Switch 2", "text");
+    Program.AddOption("WeMo.IPAddress3", "", "5. IP Address of WeMo Switch 3", "text");
+    Program.AddOption("WeMo.IPAddress4", "", "6. IP Address of WeMo Switch 4", "text");
+    Program.AddOption("WeMo.IPAddress5", "", "7. IP Address of WeMo Switch 5", "text");
+    Program.AddOption("WeMo.IPAddress6", "", "8. IP Address of WeMo Switch 6", "text");
+    Program.AddOption("WeMo.IPAddress7", "", "9. IP Address of WeMo Switch 7", "text");
 });
 
 return true;</ScriptCondition>
   <ScriptSource>var nombrewemo = 7;
-var WeMo_AlarmAD = Program.InputField("WeMo.AlarmAD").Value;
-var WeMo_Refresh = Program.InputField("WeMo.Refresh").DecimalValue;
+var WeMo_AlarmAD = Program.Option("WeMo.AlarmAD").Value;
+var WeMo_Refresh = Program.Option("WeMo.Refresh").DecimalValue;
 var IPAddress = "";
 int indice;
 for (indice = 1; indice &lt;= nombrewemo; indice++)
 {
-  if (!string.IsNullOrEmpty(Program.InputField(String.Format("WeMo.IPAddress{0}", indice.ToString())).Value)) { 
+  if (!string.IsNullOrEmpty(Program.Option(String.Format("WeMo.IPAddress{0}", indice.ToString())).Value)) { 
     Program.AddVirtualModule("HomeAutomation.WeMo", indice.ToString(), "Switch", "homegenie/generic/switch"); }
 }
 Action&lt;string,string&gt; 
