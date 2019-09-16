@@ -1,9 +1,9 @@
 {
     "author": "genielabs",
-    "version": "v1.0",
+    "version": "v1.1",
     "title": "GPIO Modules",
     "description": "Raspberry Pi GPIO mapped to HG modules",
-    "published": "2015-02-12T00:00:00Z",
+    "published": "2019-09-16T00:00:00Z",
     "sourcecode": "",
     "homepage": "", 
     "widgets": [ ],
