@@ -1,0 +1,17 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<MigServiceConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<Gateways>
+    <Gateway Name="WebServiceGateway" IsEnabled="true">
+        <Option Name="BaseUrl" Value="/" />
+        <Option Name="HomePath" Value="html" />
+        <Option Name="Host" Value="*" />
+        <Option Name="Port" Value="8080" />
+        <Option Name="EnableFileCaching" Value="True" />
+    </Gateway>
+</Gateways>
+<Interfaces>
+  <Interface Domain="Example.InterfaceSkelton" IsEnabled="true" AssemblyName="MIG-Interface.dll">
+    <Options />
+  </Interface>
+</Interfaces>
+</MigServiceConfiguration>

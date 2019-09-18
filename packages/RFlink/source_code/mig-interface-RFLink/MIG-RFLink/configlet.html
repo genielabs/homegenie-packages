@@ -1,0 +1,805 @@
+<!-- data-locale-id - propriété regionale -->
+<!-- data-ui-field - propriété regionale -->
+<div data-configlet-id="HomeAutomation.RFLink">
+
+    <div class="ui-grid-a">
+        <div class="ui-block-a">
+            <span data-locale-id="device_port">Device Port</span>
+            <div data-role="controlgroup" data-type="horizontal" data-mini="true">
+                <select data-ui-field="serialport" data-mini="true"></select>
+            </div>
+        </div>
+        <div class="ui-block-b" align="right">
+            <select data-ui-field="isenabled" data-role="slider">
+                <option value="0" data-locale-id="configure_interfaces_optdisable">Disable</option>
+                <option value="1" data-locale-id="configure_interfaces_optenable">Enable</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- common operation buttons -->
+
+    <div>
+        <span data-locale-id="options">RFLink Common Tasks</span>
+        <div data-role="controlgroup" data-type="horizontal" data-mini="true">
+            <a data-ui-field="debug_btn" data-locale-id="logs" class="ui-btn ui-icon-search ui-btn-icon-left">Debug</a>
+        </div>
+    </div>
+
+    <div>
+        <span data-locale-id="options">RFLink Modes</span>
+        <div>
+                <div data-ui-field="nodonrf_btn"  data-role="controlgroup" data-type="horizontal" data-mini="true" style="display:inline-block">
+                     <label>NodoNRF<input  data-locale-id="nodonrf"  type="checkbox"/></label>
+                </div>
+                <div data-ui-field="gpio_btn"  data-role="controlgroup" data-type="horizontal" data-mini="true" style="display:inline-block">
+                     <label>GPIO<input  data-locale-id="gpio"  type="checkbox" /></label>
+               </div>
+
+
+                <div data-ui-field="nrf24l01mode" data-role="controlgroup" data-type="horizontal" data-mini="true" style="display:inline-block">
+                    <label>Disable<input type="radio" name="radio-1" data-locale-id="disable" value="0" /></label>
+                    <label>MiLight<input type="radio" name="radio-1" data-locale-id="milight" value="1" /></label>
+                    <label>BLE<input type="radio" name="radio-1" data-locale-id="ble" value="2" /></label>
+                    <label>MySensors<input type="radio" name="radio-1" data-locale-id="mysensors" value="4" /></label>
+                </div>
+
+                <div data-ui-field="cc2500mode" data-role="controlgroup" data-type="horizontal" data-mini="true" style="display:inline-block">
+                    <label>Disable<input type="radio" name="radio-2" data-locale-id="disable" value="0" /></label>
+                    <label>LivingColors<input type="radio" name="radio-2" data-locale-id="livingcolors" value="1" /></label>
+                    <label>Ansluta<input type="radio" name="radio-2" data-locale-id="ansluta" value="2" /></label>
+                </div>
+        </div>
+    </div>
+
+    <div>
+        <p data-ui-field="version_msg" data-locale-id="version">Version X.X.X.X</p>
+    </div>
+    <!-- popups -->
+
+    <div data-ui-field="log_popup" class="ui-corner-all" data-position-to="window" data-transition="pop" data-overlay-theme="b">
+        <a href="#" data-rel="back" class="ui-btn ui-corner-all ui-shadow ui-icon-delete ui-btn-icon-notext ui-btn-right">Close</a>
+        <div data-role="header" class="ui-corner-top">
+            <h1 data-locale-id="log_heading">RFLink Discovery</h1>
+        </div>
+        <div class="ui-content ui-corner-bottom" style="height:280px;max-height:280px;overflow-y:scroll;overflow-x:hidden;">
+            <p data-ui-field="log_msg" data-role="listview" style="font-family:monospace; font-size:8pt;"></p>
+        </div>
+        <div data-role="footer" data-tap-toggle="false" align="center">
+            <a data-ui-field="clear_btn" data-locale-id="clear" class="ui-btn ui-icon-delete ui-btn-icon-left">Status</a>
+            <a data-ui-field="status_btn" data-locale-id="status" class="ui-btn ui-icon-refresh ui-btn-icon-left">Status</a>
+            <a data-ui-field="reboot_btn" data-locale-id="reboot" class="ui-btn ui-icon-alert ui-btn-icon-left">Reboot</a>
+            <a href="#page_configure_groups" class="ui-btn ui-corner-all ui-icon-gear ui-btn-icon-left" style="margin:8px">Configure Groups and Modules</a>
+        </div>
+    </div>
+
+</div>
+
+<script type="text/javascript" language="javascript">
+HG.WebApp.SystemSettings.Interfaces['HomeAutomation.RFLink'] = {
+
+    Id: 'HomeAutomation.RFLink',
+    Initialize: function(){
+        var _this = this;
+        var configlet = this.Configlet = $('#'+HG.WebApp.SystemSettings.PageId).find('[data-configlet-id="'+this.Id+'"]');
+
+        // initialize global fields
+        this.LogMsg = configlet.find('[data-ui-field=log_msg]');
+        this.LogPopup = configlet.find('[data-ui-field=log_popup]');
+
+        //this.RF433Button = configlet.find('[data-ui-field=rf433_btn]');
+        this.NodoNRFButton = configlet.find('[data-ui-field=nodonrf_btn]');
+        this.gpioButton = configlet.find('[data-ui-field=gpio_btn]');
+
+        this.nrf24l01mode =  configlet.find('[data-ui-field=nrf24l01mode]');
+        this.cc2500mode =  configlet.find('[data-ui-field=cc2500mode]');
+
+        this.version_msg = configlet.find('[data-ui-field=version_msg]');
+
+
+        // local fields
+        var portSelect = configlet.find('[data-ui-field=serialport]');
+        var enabledFlip = configlet.find('[data-ui-field=isenabled]');
+
+        var DebugButton = configlet.find('[data-ui-field=debug_btn]');
+        var StatusButton = configlet.find('[data-ui-field=status_btn]');
+        var rebootButton = configlet.find('[data-ui-field=reboot_btn]');
+        this.clearButton = configlet.find('[data-ui-field=clear_btn]');
+
+        // get enabled status
+        HG.Configure.MIG.InterfaceCommand(_this.Id, 'IsEnabled.Get', '', '', function (data) {
+            enabledFlip.val(data.ResponseValue).slider('refresh');
+        });
+        // bind to enabled flip changes
+        enabledFlip.on('slidestop', function (event) {
+            HG.Configure.MIG.InterfaceCommand(_this.Id, 'IsEnabled.Set', enabledFlip.val(), '', function (data) {
+                if (enabledFlip.val() == '1') {
+                    if (portSelect.val() == '') {
+                        HG.WebApp.SystemSettings.ShowPortTip(portSelect);
+                    }
+                }
+            });
+        });
+       
+        // populate serial port list
+        HG.Configure.Interfaces.ServiceCall('Hardware.SerialPorts', function (ports) {
+            portSelect.empty();
+            portSelect.append('<option value="">' + HG.WebApp.Locales.GetLocaleString('systemsettings_selectport_placeholder', false, this.Locale) + '</option>');
+            portSelect.append('<option value="" data-ui-action="custom">(enter custom port)</option>');
+            if (ports.length == 0) {
+                portSelect.append('<option value="">NO SERIAL PORTS FOUND</option>');
+            } else {
+                for (var p = 0; p < ports.length; p++) {
+                    portSelect.append('<option value="' + ports[p] + '">' + ports[p] + '</option>');
+                }
+            }
+            portSelect.selectmenu('refresh', true);
+            // set current configured port
+            HG.Configure.MIG.InterfaceCommand(_this.Id, 'Options.Get', 'Port', '', function (port) {
+                var opt = portSelect.find('option[value="'+port.ResponseValue+'"]');
+                if (opt.length == 0) {
+                    // custom port
+                    portSelect.find('option').eq(1).val(port.ResponseValue);
+                    portSelect.find('option').eq(1).html(port.ResponseValue);
+                    portSelect.selectmenu('refresh', true);
+                }
+                portSelect.val(port.ResponseValue);
+                portSelect.selectmenu('refresh', true);
+            });
+        });
+        // bind to port select change event
+        portSelect.change(function (event) {
+            if ($(this)[0].selectedIndex == 1) {
+                var port = $(this).find('option').eq(1).text();
+                if (port == '(enter custom port)') port = '';
+                port = prompt('Please enter port path', port);
+                if (port != null) {
+                    $(this).find('option').eq(1).val(port);
+                    if (port != '' && port != '(enter custom port)') {
+                        $(this).find('option').eq(1).html(port);
+                    } else {
+                        $(this).val('');
+                        $(this).find('option').eq(1).html('(enter custom port)');
+                    }
+                    $(this).selectmenu('refresh', true);
+                }
+            }
+            HG.Configure.MIG.InterfaceCommand(_this.Id, 'Options.Set', 'Port', encodeURIComponent($(this).val()));
+        });
+
+        //Synchronise state with Option
+        // this.rflink_get_option(this.RF433Button,'setRF433');
+        this.rflink_get_option(this.NodoNRFButton,'setNodoNRF');
+        this.rflink_get_option(this.gpioButton,'setGPIO');
+
+        HG.Configure.MIG.InterfaceCommand(this.Id, 'Options.Get', 'NRF24L01_Mode', '', function (data) {
+          _this.radiogroup_set(_this.nrf24l01mode,data.ResponseValue);
+        });
+
+        HG.Configure.MIG.InterfaceCommand(this.Id, 'Options.Get', 'CC2500_Mode', '', function (data) {
+               _this.radiogroup_set(_this.cc2500mode,data.ResponseValue);
+        });
+
+        // bind to button actions
+        DebugButton.on('click', function() {
+            _this.rflink_Log();
+        });
+
+        StatusButton.on('click', function() {
+           $.get('/' + HG.WebApp.Data.ServiceKey + '/'+_this.Id+'/1/Controller.Status/'+ (new Date().getTime()), function (data) { });
+        });
+    
+        rebootButton.on('click', function() {
+           $.get('/' + HG.WebApp.Data.ServiceKey + '/'+_this.Id+'/1/Controller.Reboot/'+ (new Date().getTime()), function (data) { });
+        });
+
+        this.clearButton.on('click', function() {
+            _this.LogMsg.empty();
+        });
+
+
+
+        //this.RF433Button.on('click', function() {
+        //   $.get('/' + HG.WebApp.Data.ServiceKey + '/'+_this.Id+'/1/Controller.RF433/' + !_this.checkbox_get($(this)), function (data) { });
+        //});
+        this.NodoNRFButton.on('click', function() {
+            //$.get('/' + HG.WebApp.Data.ServiceKey + '/'+_this.Id+'/1/Controller.NodoNRF/' + !_this.checkbox_get($(this)), function (data) { });
+           HG.Configure.MIG.InterfaceCommand(_this.Id, 'Options.Set', 'NodoNRF', encodeURIComponent(!_this.checkbox_get($(this))));
+        });
+
+        this.gpioButton.on('click', function() {
+           // $.get('/' + HG.WebApp.Data.ServiceKey + '/'+_this.Id+'/1/Controller.GPIO/' + , function (data) { });
+            HG.Configure.MIG.InterfaceCommand(_this.Id, 'Options.Set', 'GPIO', encodeURIComponent(!_this.checkbox_get($(this))));
+        });
+
+        this.nrf24l01mode.change(function (event) {
+           //$.get('/' + HG.WebApp.Data.ServiceKey + '/'+_this.Id+'/1/Controller.NRF24L01/' + _this.radiogroup_get($(this)) , function (data) { });
+           HG.Configure.MIG.InterfaceCommand(_this.Id, 'Options.Set', 'NRF24L01_Mode', encodeURIComponent(_this.radiogroup_get($(this))));
+        });
+
+        this.cc2500mode.change(function (event) {
+           //$.get('/' + HG.WebApp.Data.ServiceKey + '/'+_this.Id+'/1/Controller.CC2500/' + _this.radiogroup_get($(this)) , function (data) { });
+           HG.Configure.MIG.InterfaceCommand(_this.Id, 'Options.Set', 'CC2500_Mode', encodeURIComponent(_this.radiogroup_get($(this))));
+        });
+
+        // initialize popups
+        this.LogPopup.popup();
+        this.LogPopup.isopen = false;
+        this.LogPopup.on( "popupafterclose", function( event, ui ) {_this.LogPopup.isopen = false;} );
+        this.LogPopup.on( "popupafteropen", function( event, ui ) {_this.LogPopup.isopen = true;} );
+
+        // listen to HG events
+        if (typeof this._eventListenerId !== 'undefined') {
+            HG.WebApp.Events.RemoveListener(_this);
+        }
+
+        HG.WebApp.Events.AddListener(_this);
+        //Set for subcribe one shot
+        this._eventListenerId =true;
+
+        // Send request for obtain version number
+        $.get('/' + HG.WebApp.Data.ServiceKey + '/'+this.Id+'/1/Controller.Version/' + (new Date().getTime()), function (data) { });
+
+
+    },
+
+    rflink_get_option: function(item,name) {
+        var _this = this;
+        HG.Configure.MIG.InterfaceCommand(this.Id, 'Options.Get', name, '', function (response) {
+                _this.checkbox_set(item,response.ResponseValue);
+        });
+    },
+
+
+
+    rflink_Log: function() {
+        var _this = this;
+        //_this.LogMsg.empty();
+        _this.LogPopup.popup('open');
+        _this.LogPopup.isopen = true;
+        _this.rflink_Log_lifesign(_this);
+    },
+
+    rflink_Log_lifesign: function(me) {
+          var _this = me;
+          if (_this.LogPopup.isopen ){
+            //Ajouterla fonction pour envoyer les logs a la popup
+            $.get('/' + HG.WebApp.Data.ServiceKey + '/'+_this.Id+'/1/Controller.Logs/' + (new Date().getTime()), function (data) { });
+            setTimeout(function() {_this.rflink_Log_lifesign(_this)}, 5000);
+
+          }
+    },
+
+
+    rflink_command: function(name) {
+        var _this = this;
+        var titleString = HG.WebApp.Locales.GetLocaleString('reboot_title', false, this.Locale);
+        var messageString = HG.WebApp.Locales.GetLocaleString('reboot_prompt', false, this.Locale);
+        var warningString = HG.WebApp.Locales.GetLocaleString('reboot_warning', false, this.Locale);
+        messageString += '<div style="font-weight:bolder">' + warningString + '</div>';
+        HG.WebApp.Utility.ConfirmPopup(titleString, messageString, function(proceed ) {
+            if (proceed) $.get('/' + HG.WebApp.Data.ServiceKey + '/'+_this.Id+'/1/Controller.' + name + '/' + (new Date().getTime()), function (data) { });
+        });
+    },
+
+   checkbox_set: function(item,value) {
+        try {
+            var ret = false;
+            if (value == 'True' ||value == 'true' || value == '1' || value == '-1' || value == 'on' ) {
+              ret = true;
+            }
+
+            item.find('input[type=checkbox]').each(function () {
+                $(this).prop('checked', ret);
+                $(this).checkboxradio('refresh');
+            });
+        }
+        catch (e) {
+           this.mlogErreurs(e);
+        }
+    },
+
+    checkbox_get: function(item) {
+        try {
+            var ret = '';
+            item.find('input[type=checkbox]').each(function () {
+              ret= ($(this).prop('checked'));  
+            });
+            return ret;
+        }
+        catch (e) {
+           this.mlogErreurs(e);
+        }
+     },
+
+    radiogroup_set:function(item,value) {
+        try {
+            item.find('input[type=radio]').each(function () {
+                if (value.indexOf( $(this).val()) >= 0) {
+                    $(this).prop('checked', true);
+                }
+                else {
+                    $(this).prop('checked', false);
+                }
+                $(this).checkboxradio("refresh");
+            });
+            //item.find('input[type=radio]').checkboxradio('refresh');        
+            }
+        catch (e) {
+           this.mlogErreurs(e);
+        }
+    },
+
+    radiogroup_get:function(item) {
+        try {
+             var ret = '';
+            item.find('input[type=radio]').each(function () {
+              if ($(this).prop('checked')){
+                ret=$(this).val();
+                return;
+              }
+            });
+            return ret;            
+        }
+        catch (e) {
+           this.mlogErreurs(e);
+        }
+    },
+    mlogErreurs:function(e){
+        //For intercept in debug
+    },
+
+  // listener object must implement listener.parameterEventCallback function
+    parameterEventCallback: function(module, event) {
+      var _this = this;
+
+        if(event != null &&  event.Domain == _this.Id &&  event.Source == '1' ){
+            var val = event.Value;
+            switch (event.Property) {
+                    case 'Controller.Version':
+                        _this.version_msg.text(val);
+                        break;
+                    case 'Controller.Logs':
+                             if (_this.LogPopup)
+                            _this.LogMsg.prepend('*&nbsp;' + val + '<br/>');
+                            //Envoi d'un signal de vie pour que les logs ne se désactive pas (à ajouter dans la popup)
+                        break;
+
+                   // case 'Controller.RF433':
+                   //     _this.checkbox_set(_this.RF433Button,val);
+                   //     break;
+                    case 'Controller.NodoNRF':
+                        _this.checkbox_set(_this.NodoNRFButton,val);
+                        break;
+                    case 'Controller.GPIO':
+                        _this.checkbox_set(_this.gpioButton,val);
+                        break;
+                    case 'Controller.NRF24L01':
+                         _this.radiogroup_set(_this.nrf24l01mode,val);
+                        break;
+                    case 'Controller.CC2500':
+                        _this.radiogroup_set(_this.cc2500mode,val);
+                        break;
+                    default:
+                        break;
+               }
+
+
+        }
+
+    },
+
+    Localize: function() {
+        var configlet = this.Configlet = $('#'+HG.WebApp.SystemSettings.PageId).find('[data-configlet-id="'+this.Id+'"]');
+        var userLang = HG.WebApp.Locales.GetUserLanguage();
+        // English is the default locale
+        var defaultLocale = {
+            "title":
+                 "Rflink Interface Options",
+            "device_port":
+                 "Device Port",
+            "general_command":
+                 "General Command",
+            "logs":
+                 "Logs Acces",
+            "reboot":
+                 "Reboot",
+            "options":
+                 "Options",
+            "rf433":
+                 "RF433",
+            "nodonrf":
+                 "NodoNRF",
+            "gpio":
+                 "GPIO",
+            "disable":
+                "Disable",
+            "milight":
+                "MiLight",
+            "ble":
+                "BLE",
+            "mysensors":
+                "MySensors",
+            "ansluta":
+                "Ansluta",
+            "livingcolors":
+                "LivingColors",
+            "version":
+                "Version : XXXXX",
+            "log_heading":
+                "RFLINK Logs Viewer",
+            "reboot_title":
+                "Reboot Confirmation",
+            "reboot_prompt":
+                "Are you sure you want to hard reset RFLINK controller?",
+            "status":
+                "Status Request",
+            "clear":
+                "Clear logs",
+            "options":
+                "Options modes",
+           "reboot_warning":
+                    ""
+
+        };
+        var locale = defaultLocale;
+        // other locale definitions follows
+        switch(userLang)
+        {
+        // German
+        case 'de': locale = {
+             "title":
+                 "Rflink Interface Options",
+            "device_port":
+                 "Device Port",
+            "general_command":
+                 "General Command",
+            "logs":
+                 "Logs Acces",
+            "reboot":
+                 "Reboot",
+            "options":
+                 "Options",
+            "rf433":
+                 "RF433",
+            "nodonrf":
+                 "NodoNRF",
+            "gpio":
+                 "GPIO",
+            "disable":
+                "Disable",
+            "milight":
+                "MiLight",
+            "ble":
+                "BLE",
+            "mysensors":
+                "MySensors",
+            "ansluta":
+                "Ansluta",
+            "livingcolors":
+                "LivingColors",
+            "version":
+                "Version : XXXXX",
+            "log_heading":
+                "RFLINK Logs Viewer",
+            "reboot_title":
+                "Reboot Confirmation",
+            "reboot_prompt":
+                "Are you sure you want to hard reset RFLINK controller?",
+                "status":
+                "Status Request",
+              "clear":
+                "Clear logs",
+            "options":
+                "Options modes",
+           "reboot_warning":
+                ""
+            };
+            break;
+        // French
+        case 'fr': locale = {
+             "title":
+                 "Rflink Interface Options",
+            "device_port":
+                 "Device Port",
+            "general_command":
+                 "General Command",
+            "logs":
+                 "Logs Acces",
+            "reboot":
+                 "Reboot",
+            "options":
+                 "Options",
+            "rf433":
+                 "RF433",
+            "nodonrf":
+                 "NodoNRF",
+            "gpio":
+                 "GPIO",
+            "disable":
+                "Disable",
+            "milight":
+                "MiLight",
+            "ble":
+                "BLE",
+            "mysensors":
+                "MySensors",
+            "ansluta":
+                "Ansluta",
+            "livingcolors":
+                "LivingColors",
+            "version":
+                "Version : XXXXX",
+            "log_heading":
+                "RFLINK Logs Viewer",
+            "reboot_title":
+                "Reboot Confirmation",
+            "reboot_prompt":
+                "Are you sure you want to hard reset RFLINK controller?",
+                "status":
+                "Status Request",
+            "clear":
+                "Clear logs",
+            "options":
+                "Options modes",
+           "reboot_warning":
+                ""
+            };
+            break;
+        // Spanish
+        case 'es': locale = {
+            "title":
+                 "Rflink Interface Options",
+            "device_port":
+                 "Device Port",
+            "general_command":
+                 "General Command",
+            "logs":
+                 "Logs Acces",
+            "reboot":
+                 "Reboot",
+            "options":
+                 "Options",
+            "rf433":
+                 "RF433",
+            "nodonrf":
+                 "NodoNRF",
+            "gpio":
+                 "GPIO",
+            "disable":
+                "Disable",
+            "milight":
+                "MiLight",
+            "ble":
+                "BLE",
+            "mysensors":
+                "MySensors",
+            "ansluta":
+                "Ansluta",
+            "livingcolors":
+                "LivingColors",
+            "version":
+                "Version : XXXXX",
+            "log_heading":
+                "RFLINK Logs Viewer",
+            "reboot_title":
+                "Reboot Confirmation",
+            "reboot_prompt":
+                "Are you sure you want to hard reset RFLINK controller?",
+                "status":
+                "Status Request",
+            "clear":
+                "Clear logs",
+            "options":
+                "Options modes",
+           "reboot_warning":
+                ""
+            };
+            break;
+        // Italian
+        case 'it': locale = {
+             "title":
+                 "Rflink Interface Options",
+            "device_port":
+                 "Device Port",
+            "general_command":
+                 "General Command",
+            "logs":
+                 "Logs Acces",
+            "reboot":
+                 "Reboot",
+            "options":
+                 "Options",
+            "rf433":
+                 "RF433",
+            "nodonrf":
+                 "NodoNRF",
+            "gpio":
+                 "GPIO",
+            "disable":
+                "Disable",
+            "milight":
+                "MiLight",
+            "ble":
+                "BLE",
+            "mysensors":
+                "MySensors",
+            "ansluta":
+                "Ansluta",
+            "livingcolors":
+                "LivingColors",
+            "version":
+                "Version : XXXXX",
+            "log_heading":
+                "RFLINK Logs Viewer",
+            "reboot_title":
+                "Reboot Confirmation",
+            "reboot_prompt":
+                "Are you sure you want to hard reset RFLINK controller?",
+                "status":
+                "Status Request",
+            "clear":
+                "Clear logs",
+            "options":
+                "Options modes",
+           "reboot_warning":
+                ""
+            };
+            break;
+        // Dutch
+        case 'nl': locale = {
+            "title":
+                 "Rflink Interface Options",
+            "device_port":
+                 "Device Port",
+            "general_command":
+                 "General Command",
+            "logs":
+                 "Logs Acces",
+            "reboot":
+                 "Reboot",
+            "options":
+                 "Options",
+            "rf433":
+                 "RF433",
+            "nodonrf":
+                 "NodoNRF",
+            "gpio":
+                 "GPIO",
+            "disable":
+                "Disable",
+            "milight":
+                "MiLight",
+            "ble":
+                "BLE",
+            "mysensors":
+                "MySensors",
+            "ansluta":
+                "Ansluta",
+            "livingcolors":
+                "LivingColors",
+            "version":
+                "Version : XXXXX",
+            "log_heading":
+                "RFLINK Logs Viewer",
+            "reboot_title":
+                "Reboot Confirmation",
+            "reboot_prompt":
+                "Are you sure you want to hard reset RFLINK controller?",
+                "status":
+                "Status Request",
+              "clear":
+                "Clear logs",
+            "options":
+                "Options modes",
+           "reboot_warning":
+                ""
+            };
+            break;
+        // Russian
+        case 'ru': locale = {
+            "title":
+                 "Rflink Interface Options",
+            "device_port":
+                 "Device Port",
+            "general_command":
+                 "General Command",
+            "logs":
+                 "Logs Acces",
+            "reboot":
+                 "Reboot",
+            "options":
+                 "Options",
+            "rf433":
+                 "RF433",
+            "nodonrf":
+                 "NodoNRF",
+            "gpio":
+                 "GPIO",
+            "disable":
+                "Disable",
+            "milight":
+                "MiLight",
+            "ble":
+                "BLE",
+            "mysensors":
+                "MySensors",
+            "ansluta":
+                "Ansluta",
+            "livingcolors":
+                "LivingColors",
+            "version":
+                "Version : XXXXX",
+            "log_heading":
+                "RFLINK Logs Viewer",
+            "reboot_title":
+                "Reboot Confirmation",
+            "reboot_prompt":
+                "Are you sure you want to hard reset RFLINK controller?",
+                "status":
+                "Status Request",
+            "clear":
+                "Clear logs",
+            "options":
+                "Options modes",
+           "reboot_warning":
+                ""
+            };
+            break;
+        // Swedish
+        case 'sv': locale = {
+             "title":
+                 "Rflink Interface Options",
+            "device_port":
+                 "Device Port",
+            "general_command":
+                 "General Command",
+            "logs":
+                 "Logs Acces",
+            "reboot":
+                 "Reboot",
+            "options":
+                 "Options",
+            "rf433":
+                 "RF433",
+            "nodonrf":
+                 "NodoNRF",
+            "gpio":
+                 "GPIO",
+            "disable":
+                "Disable",
+            "milight":
+                "MiLight",
+            "ble":
+                "BLE",
+            "mysensors":
+                "MySensors",
+            "ansluta":
+                "Ansluta",
+            "livingcolors":
+                "LivingColors",
+            "version":
+                "Version : XXXXX",
+            "log_heading":
+                "RFLINK Logs Viewer",
+            "reboot_title":
+                "Reboot Confirmation",
+            "reboot_prompt":
+                "Are you sure you want to hard reset RFLINK controller?",
+                "status":
+                "Status Request",
+             "clear":
+                "Clear logs",
+            "options":
+                "Options modes",
+           "reboot_warning":
+                ""
+            };
+            break;
+        }
+        HG.WebApp.Locales.LocalizeElement(this.Configlet, locale);
+        this.Locale = locale;
+    }
+
+};
+</script>
