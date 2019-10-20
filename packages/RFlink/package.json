@@ -15,13 +15,6 @@
     ],
     "programs": [
         { 
-            "file": "RFLink_RemoteCreator.hgx",
-            "name":"RFLink RemoteCreator",
-            "description": "RFLink program for add remote RF modules",
-            "uid": "100801",
-            "group": "RFLink" 
-        },
-        { 
             "file": "RFLinkRemoteControler.hgx",
             "name":"RFLink RemoteControler",
             "description": "RFLink program for add remote RF modules",
