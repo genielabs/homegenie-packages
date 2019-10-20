@@ -1,0 +1,194 @@
+<?xml version="1.0" encoding="utf-16"?>
+<ProgramBlock xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <ConditionType>OnTrue</ConditionType>
+  <Conditions />
+  <Commands />
+  <ScriptCondition>const string OPTION_IP = "IPAddress";
+const string OPTION_PORT = "Port";
+const string OPTION_LOGIN = "Login";
+const string OPTION_PASSWORD = "Password";
+
+Program
+  .AddOption(OPTION_IP, "192.168.0.1", "0. Enter IP address of Network Relays", "text")
+  .AddOption(OPTION_PORT, "80", "1. Enter port of Network relays", "text")
+  .AddOption(OPTION_LOGIN, "admin", "1. Enter port of Network relays", "text")
+  .AddOption(OPTION_PASSWORD, "1234", "1. Enter port of Network relays", "password")
+  .Run();
+</ScriptCondition>
+  <ScriptSource>const string MODULES_DOMAIN = "HomeAutomation.NetworkRelaysKMTronic";
+
+const string OPTION_IP = "IPAddress";
+const string OPTION_PORT = "Port";
+const string OPTION_LOGIN = "Login";
+const string OPTION_PASSWORD = "Password";
+
+const string EVENT_DESCRIPTION = "NetworkRelays KMTronic";
+
+
+
+//Alpha Smart Home remote controller (8 relays)
+Program.AddVirtualModules(MODULES_DOMAIN, "Switch", "homegenie/generic/switch", 1, 8);
+var ListModules = Modules.InDomain(MODULES_DOMAIN);
+Program.Parameter("Status.Level").Value = "1";
+	string server = Program.Option(OPTION_IP).Value.Trim();
+	string port = Program.Option(OPTION_PORT).Value.Trim();
+	string login = Program.Option(OPTION_LOGIN).Value.Trim();
+	string password = Program.Option(OPTION_PASSWORD).Value.Trim();
+	string beginrequest = "http://" +  server + ":" + port;
+
+//Get status command
+WebClient client = null;
+int ErrorCounter = 0;
+
+
+DownloadDataCompletedEventHandler DownloadDataCompleted =(sender,e)=&gt;{
+  try{
+    if(!e.Cancelled &amp; e.Error == null){
+      byte[] data = (byte[])e.Result;
+      string textData = System.Text.Encoding.UTF8.GetString (data);
+    
+      //Find begin 
+      int _index = textData.IndexOf("Status:");
+      
+      var txt =""   ;
+      
+      //Anchor of end text
+      String result = textData.Substring(_index+7,20).Trim().Replace(" ","");
+      for(int i=0; i&lt;result.Length;i++){
+      	bool stat = result[i] == '1';
+
+        // Relay status changed by wall switch (!=)
+        var module = ListModules.WithAddress((i+1).ToString()).Get();
+        txt += module.IsOn + "!= " + stat;
+        if(module.IsOn != stat)
+        {
+         
+          Program.RaiseEvent(module, "Status.Level", stat ? "1":"0", EVENT_DESCRIPTION);
+        }
+      }
+                        //  Program.Notify(EVENT_DESCRIPTION+" : ERROR", txt );
+      ErrorCounter=0;
+    }else{
+     if(e.Error != null) Program.Notify(EVENT_DESCRIPTION, "Error:" + e.Error.Message);
+      ErrorCounter++;
+    }
+
+
+  }catch(Exception ex){
+    Program.Notify(EVENT_DESCRIPTION, "Error:" + ex.Message);
+  }
+
+};
+
+/* Function */
+var isinitialized = new Func&lt; bool&gt;(()=&gt;{
+      try{
+ 
+      if(ErrorCounter&gt;=3){
+        if(client != null) client.DownloadDataCompleted -= DownloadDataCompleted;
+        client = null;
+      }
+        
+        if(client == null){
+           client = new WebClient {Credentials = new NetworkCredential(login, password)};
+           client.DownloadDataCompleted += DownloadDataCompleted;
+        }
+        
+      }catch{
+       if(client != null) client.DownloadDataCompleted -= DownloadDataCompleted;
+        client = null;
+        return false;
+      }
+  return true;
+});
+
+var SendCommand = new Action&lt;string, bool&gt;((NumRelay,Value)=&gt;{
+      //OFF Comamnd
+      try{
+         if(isinitialized()){
+           var request = beginrequest +"/FF0" + NumRelay + "0" + (Value ? "1" : "0");
+           var tmpclient =new WebClient {Credentials = new NetworkCredential(login, password)};
+           var response = tmpclient.UploadString(request,"GET");
+         } 
+      }catch{
+        
+      }
+});
+
+When.WebServiceCallReceived(MODULES_DOMAIN, ( args ) =&gt; 
+{
+  string[] reqs = ((string)args).Split('/');
+  var res = "{ 'ResponseValue' : 'ERROR' }";
+  try
+  {
+    string switchnumber = reqs[1];
+    string command = reqs[2];
+    var module = ListModules.WithAddress(switchnumber).Get();
+    int result= -1;
+  switch(command)
+  {
+    case "Control.On":
+      result = 1;
+      break;
+    case "Control.Off":
+      result = 0;
+      break;
+    case "Control.Toggle":
+      if (module.Parameter("Status.Level").DecimalValue == 0)
+      {
+        result = 1;
+      }
+      else
+      {
+        result = 0;
+      }
+      break;
+  }
+    if(result&gt;=0){
+            Program.RaiseEvent(module, "Status.Level", result.ToString(), EVENT_DESCRIPTION);
+            SendCommand(switchnumber,result==1?true:false);
+       		Pause(1);
+     	    res = "{ 'ResponseValue' : 'OK' }";
+    }
+
+    
+  } 
+  catch (Exception e) 
+    {
+        Program.Notify(EVENT_DESCRIPTION+" : ERROR", e.Message);
+	    res = e.Message + " " + e.StackTrace;
+	}
+  return res;
+});
+
+       
+while (Program.IsEnabled)
+{
+  try{
+     //Set all stats on start program 
+    if (isinitialized()){
+       //Get Status
+       client.DownloadDataAsync(new Uri(beginrequest + "/relays.cgi"));
+    } 
+  }
+  catch (Exception e) 
+  {
+     ErrorCounter++;
+     Program.Notify(EVENT_DESCRIPTION+" : ERROR", e.Message);
+  }
+  Pause(10);
+}
+Program.GoBackground();
+</ScriptSource>
+  <ScriptErrors>[]</ScriptErrors>
+  <Domain>HomeAutomation.HomeGenie.Automation</Domain>
+  <Address>1000</Address>
+  <Name>NetworkRelays KMTronic</Name>
+  <Description>Network relay modul controller</Description>
+  <Group>MyCode</Group>
+  <Features />
+  <ActivationTime xsi:nil="true" />
+  <TriggerTime>2019-10-20T08:17:25.66224Z</TriggerTime>
+  <Type>CSharp</Type>
+  <IsEnabled>true</IsEnabled>
+</ProgramBlock>

@@ -1,0 +1,20 @@
+{
+    "author": "Gael Le Pennec",
+    "version": "v1.0",
+    "title": "EcoWatcher",
+    "description": "Adds EcoWatcher capability to HomeGenie",
+    "published": "2017-10-30T00:00:00Z",
+    "sourcecode": "",
+    "homepage": "", 
+    "widgets": [],
+    "programs": [
+        { 
+            "file": "EcoWatcher.hgx",
+            "name":"EcoWatcher",
+            "description": "program for add Eco feature for each devices",
+            "uid": "100602",
+            "group": "SmartControl" 
+        }
+    ],
+    "interfaces": []
+}

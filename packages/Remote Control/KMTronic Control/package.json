@@ -1,0 +1,20 @@
+{
+    "author": "Gael Le Pennec",
+    "version": "v1.0",
+    "title": "RFLink Widgets",
+    "description": "Adds RFLink control capability to HomeGenie",
+    "published": "2017-10-30T00:00:00Z",
+    "sourcecode": "",
+    "homepage": "", 
+    "widgets": [],
+    "programs": [
+        { 
+            "file": "NetworkRelays_KMTronic.hgx",
+            "name":"NetworkRelays KMTronic",
+            "description": "KMTronic program for control NetworkRelays",
+            "uid": "100502",
+            "group": "RemoteControl" 
+        }
+    ],
+    "interfaces": []
+}

@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-16"?>
+<ProgramBlock xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <ConditionType>OnTrue</ConditionType>
+  <Conditions />
+  <Commands />
+  <ScriptCondition>Program
+
+  .AddFeature("", "Light,Switch", "PingWatcher.Address", "IP address or DNS name", "text")
+  .Run();
+</ScriptCondition>
+  <ScriptSource>// CSharp Automation Program Plugin
+// Example for using Helper Classes:
+// Modules.WithName("Light 1").On();
+// main program loop
+const string EVENT_DESCRIPTION = "Ping Watcher";
+
+const string PARAMETER_ADDRESS = "PingWatcher.Address";
+
+var FctPing = new Func&lt;ModuleHelper, bool&gt;((module)=&gt;{
+  try{
+    var remoteaddress = module.Parameter(PARAMETER_ADDRESS);
+    if(remoteaddress != null &amp;&amp; remoteaddress.Value != null &amp;&amp; remoteaddress.Value != ""){
+       //Update stat 
+       bool stat = Net.Ping(remoteaddress.Value);
+       if(module.IsOn != stat) Program.RaiseEvent(module, "Status.Level", stat ? "1":"0", EVENT_DESCRIPTION);
+       return true;
+    } 
+
+  }catch(Exception ex){
+	 Program.Notify(EVENT_DESCRIPTION, "Error:" + ex.Message);
+  }
+  return false;
+});
+
+
+
+while (Program.IsEnabled)
+{
+  var PingModules = Modules.WithParameter(PARAMETER_ADDRESS).OfDeviceType("Switch,Light"); //WithParameter substitution of WithFeature
+  PingModules.Each((module)=&gt;{
+    FctPing(module);
+    return false;
+  });
+
+  Pause(120);
+}
+</ScriptSource>
+  <ScriptErrors>[]</ScriptErrors>
+  <Domain>HomeAutomation.HomeGenie.Automation</Domain>
+  <Address>1003</Address>
+  <Name>PingWatcher</Name>
+  <Description>Watch status of devices with Ping function</Description>
+  <Group>MyCode</Group>
+  <Features>
+    <ProgramFeature>
+      <FieldType>text</FieldType>
+      <ForDomains />
+      <ForTypes>Light,Switch</ForTypes>
+      <Property>PingWatcher.Address</Property>
+      <Description>IP address or DNS name</Description>
+    </ProgramFeature>
+  </Features>
+  <ActivationTime xsi:nil="true" />
+  <TriggerTime>2019-10-20T08:17:25.77634Z</TriggerTime>
+  <Type>CSharp</Type>
+  <IsEnabled>true</IsEnabled>
+</ProgramBlock>

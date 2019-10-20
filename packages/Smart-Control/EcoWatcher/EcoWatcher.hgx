@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="utf-16"?>
+<ProgramBlock xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <ConditionType>OnTrue</ConditionType>
+  <Conditions />
+  <Commands />
+  <ScriptCondition>const string PARAMETER_TIMEOUT = "EcoWatcher.TimeOut";
+const string PARAMETER_TIMEMAIL = "EcoWatcher.TimeMail";
+const string PARAMETER_RAZ = "EcoWatcher.RAZ";
+Program
+.AddFeature("", "Light,Switch", PARAMETER_TIMEOUT, "Number of minutes before shutdown module", "slider:0:3600:1")
+.AddFeature("", "Light,Switch", PARAMETER_TIMEMAIL, "Number of minutes for send warning mail [0 = Disable]", "slider:0:3600:1")
+.AddFeature("", "Light,Switch", PARAMETER_RAZ, "Check for restart the counter", "checkbox")
+  
+.Run();
+</ScriptCondition>
+  <ScriptSource>// CSharp Automation Program Plugin
+// Example for using Helper Classes:
+// Modules.WithName("Light 1").On();
+// main program loop
+const string EVENT_DESCRIPTION = "EcoWatcher";
+
+const string PARAMETER_TIMEOUT = "EcoWatcher.TimeOut";
+const string PARAMETER_TIMEMAIL = "EcoWatcher.TimeMail";
+const string PARAMETER_RAZ = "EcoWatcher.RAZ";
+
+const string PARAMETER_STARTTIME = "EcoWatcher.StartTime";
+const string PARAMETER_MAILSENDED = "EcoWatcher.MailSended";
+
+var FctEcoWatch = new Func&lt;ModuleHelper, bool&gt;((module)=&gt;{
+  try{
+    double dec_timeout = 0;
+    double dec_timemail = 0;
+    bool b_raz = false;
+    bool b_mailsended = false;
+
+    var _timeout = module.Parameter(PARAMETER_TIMEOUT);
+    if(_timeout?.Value != null) dec_timeout =_timeout.DecimalValue;
+    
+    var _timemail = module.Parameter(PARAMETER_TIMEMAIL);
+    if(_timemail?.Value != null ) dec_timemail = _timemail.DecimalValue;
+    
+    var _raz = module.Parameter(PARAMETER_RAZ);
+    if(_raz?.Value != null &amp;&amp; _raz.Value != "") b_raz =true;
+ 	
+    var _starttime = module.Parameter(PARAMETER_STARTTIME);
+    
+    var _mailsended = module.Parameter(PARAMETER_MAILSENDED);
+    if(_mailsended?.Value != null &amp;&amp; _mailsended.Value != "0") b_mailsended =true;
+ 	
+    if(module.IsOn &amp;&amp; !b_raz){
+      //Bad property value (Here for reset RAZ if necessary)
+      if(dec_timeout&lt;= 0)return false;
+      
+      if(_starttime?.Value == null || _starttime.Value == ""){
+        //Start counting
+        Program.RaiseEvent(module, PARAMETER_STARTTIME,DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"), EVENT_DESCRIPTION);
+      }else{
+         DateTime dt_start = DateTime.ParseExact(_starttime.Value, "yyyy-MM-dd HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture); 
+         if(dec_timemail&gt;0  &amp;&amp; DateTime.Compare (dt_start.AddMinutes (dec_timemail), DateTime.Now) &lt; 0 &amp;&amp; !b_mailsended ){
+           //Send Mail 
+           string recipients = "hypernas1511@gmail.com";
+           string subject = "Avertissement HomeGenie" ;
+           string messagetext = "Attention le module le module: " 
+             					+ module.Instance.Name +  " est actif depuis plus de " 
+             					+ dec_timemail.ToString("000") + " minutes." ;
+           
+           try{
+                   Program.RunAsyncTask(()=&gt;{
+                    Net.SendMessage(recipients, subject, messagetext);
+                    Program.RaiseEvent(module, PARAMETER_MAILSENDED, "1", EVENT_DESCRIPTION);
+                   });
+           }catch(Exception ex){
+             Program.Notify(EVENT_DESCRIPTION, "Error:" + ex.Message);
+           }
+
+         }
+         if(DateTime.Compare (dt_start.AddMinutes (dec_timeout), DateTime.Now) &lt; 0 ){
+			//Turn Off module
+            module.Off();
+         }
+      }
+    }else{
+      //Reset RAZ - StartTime -MailSended
+      if(b_raz)Program.RaiseEvent(module, PARAMETER_RAZ, "", EVENT_DESCRIPTION);
+      if(_starttime?.Value != null &amp;&amp; _starttime.Value != ""  )Program.RaiseEvent(module, PARAMETER_STARTTIME, "", EVENT_DESCRIPTION);
+      if( _mailsended?.Value != null &amp;&amp; _mailsended.Value != "0"  )Program.RaiseEvent(module, PARAMETER_MAILSENDED, "0", EVENT_DESCRIPTION);
+    }
+	return true;
+  }catch(Exception ex){
+	 Program.Notify(EVENT_DESCRIPTION, "Error:" + ex.Message);
+  }
+  return false;
+});
+
+
+// We want to do further processing whenever a module changes 
+When.ModuleParameterChanged( (module, property) =&gt; {
+  if (module.HasFeature(PARAMETER_TIMEOUT) &amp;&amp; property.Name == "Status.Level")
+  {
+     FctEcoWatch(module);
+  }
+  // returning true, will route event to other listeners
+  return true;
+});
+
+
+
+
+while (Program.IsEnabled)
+{
+  var ListModules = Modules.WithParameter(PARAMETER_TIMEOUT).OfDeviceType("Switch,Light");
+  ListModules.Each((module)=&gt;{
+    FctEcoWatch(module);
+    return false;
+  });
+  Pause(120);
+}
+
+
+</ScriptSource>
+  <ScriptErrors>[]</ScriptErrors>
+  <Domain>HomeAutomation.HomeGenie.Automation</Domain>
+  <Address>1004</Address>
+  <Name>EcoWatcher</Name>
+  <Description>Switch Off  light or switch when the timout is passed</Description>
+  <Group>MyCode</Group>
+  <Features>
+    <ProgramFeature>
+      <FieldType>slider:0:3600:1</FieldType>
+      <ForDomains />
+      <ForTypes>Light,Switch</ForTypes>
+      <Property>EcoWatcher.TimeOut</Property>
+      <Description>Number of minutes before shutdown module</Description>
+    </ProgramFeature>
+    <ProgramFeature>
+      <FieldType>slider:0:3600:1</FieldType>
+      <ForDomains />
+      <ForTypes>Light,Switch</ForTypes>
+      <Property>EcoWatcher.TimeMail</Property>
+      <Description>Number of minutes for send warning mail [0 = Disable]</Description>
+    </ProgramFeature>
+    <ProgramFeature>
+      <FieldType>checkbox</FieldType>
+      <ForDomains />
+      <ForTypes>Light,Switch</ForTypes>
+      <Property>EcoWatcher.RAZ</Property>
+      <Description>Check for restart the counter</Description>
+    </ProgramFeature>
+  </Features>
+  <ActivationTime xsi:nil="true" />
+  <TriggerTime>2019-10-20T08:17:25.783362Z</TriggerTime>
+  <Type>CSharp</Type>
+  <IsEnabled>true</IsEnabled>
+</ProgramBlock>

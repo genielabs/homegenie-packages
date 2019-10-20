@@ -1,0 +1,20 @@
+{
+    "author": "Gael Le Pennec",
+    "version": "v1.0",
+    "title": "PingWatcher",
+    "description": "Adds PingWatcher capability to HomeGenie",
+    "published": "2017-10-30T00:00:00Z",
+    "sourcecode": "",
+    "homepage": "", 
+    "widgets": [],
+    "programs": [
+        { 
+            "file": "PingWatcher.hgx",
+            "name":"PingWatcher",
+            "description": "program for add Ping feature for each devices",
+            "uid": "100603",
+            "group": "SmartControl" 
+        }
+    ],
+    "interfaces": []
+}

@@ -1,0 +1,26 @@
+{
+    "author": "Gael Le Pennec",
+    "version": "v1.0",
+    "title": "Advanced Thermostat",
+    "description": "Adds  Advanced_Thermostat capability to HomeGenie",
+    "published": "2017-10-30T00:00:00Z",
+    "sourcecode": "",
+    "homepage": "", 
+    "widgets": [
+        { 
+            "file": "SmartControl_thermostat_thermostat.zip",
+            "name":"SmartControl thermostat Widget",
+            "description": "Widget for advanced thermostat"
+        }
+    ],
+    "programs": [
+        { 
+            "file": "Advanced_Thermostat.hgx",
+            "name":"Advanced Thermostat",
+            "description": "Advanced Thermostat program for add features",
+            "uid": "100601",
+            "group": "SmartControl" 
+        }
+    ],
+    "interfaces": []
+}

@@ -1,0 +1,334 @@
+<?xml version="1.0" encoding="utf-16"?>
+<ProgramBlock xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <ConditionType>OnTrue</ConditionType>
+  <Conditions />
+  <Commands />
+  <ScriptCondition>Program
+  .AddOption("ThermostatsCount", "1", "Virtual thermostats modules to create", "slider:1:10:1")
+  .AddFeature("HomeAutomation.AdvancedThermostat", "Thermostat", "VirtualThermostat.TemperatureModule", "Module to read temperature from", "module.text:any:any:sensor.temperature")
+  .AddFeature("HomeAutomation.AdvancedThermostat", "Thermostat", "VirtualThermostat.SwitchModule", "Module to switch on/off on set point", "module.text:any:switch,light,dimmer,thermostat,shutter:any")
+  .AddFeature("HomeAutomation.AdvancedThermostat", "Thermostat", "VirtualThermostat.SwitchCirculator", "Module to switch on/off for circulator", "module.text:any:switch,light,dimmer,thermostat,shutter:any")
+  
+  .AddFeature("HomeAutomation.AdvancedThermostat", "Thermostat", "VirtualThermostat.CirculatorUpTime", "Time up for circulator (minutes)", "slider:0:60:1")
+  .AddFeature("HomeAutomation.AdvancedThermostat", "Thermostat", "VirtualThermostat.Hysteresis", "Hysteresis consigne", "slider:0:5:0.1")
+  .AddFeature("HomeAutomation.AdvancedThermostat", "Thermostat", "VirtualThermostat.MinimalActivityTime", "Minimal activity time (minutes)", "slider:0:60:1")
+  .Run();
+</ScriptCondition>
+  <ScriptSource>const string MODULES_DOMAIN = "HomeAutomation.AdvancedThermostat";
+const string PARAMETER_TEMPERATURE_MODULE = "VirtualThermostat.TemperatureModule";
+const string PARAMETER_SWITCH_MODULE = "VirtualThermostat.SwitchModule";
+const string PARAMETER_SWITCH_CIRCULATOR_MODULE = "VirtualThermostat.SwitchCirculator";
+const string PARAMETER_CIRCULATOR_TIME_MODULE = "VirtualThermostat.CirculatorUpTime";
+const string PARAMETER_HYSTERESIS_MODULE = "VirtualThermostat.Hysteresis";
+const string PARAMETER_MINIMAL_ACTIVITY_MODULE = "VirtualThermostat.MinimalActivityTime";
+
+const string PARAMETER_SCHEDULERMEM_MODULE = "Thermostat.SchedulerSet";
+
+const string EVENT_DESCRIPTION = "Advanced Thermostat";
+
+const string DateTime_Format = "yyyy-MM-dd HH:mm:ss";
+const string TimeSpan_Format = @"d\:hh\:mm\:ss\.fff";
+
+var thermostatsCount = (int)Program.Option("ThermostatsCount").DecimalValue;
+if (thermostatsCount &lt;= 0) thermostatsCount = 1;
+Program.AddVirtualModules(MODULES_DOMAIN, "Thermostat", "SmartControl/thermostat/thermostat", 1, thermostatsCount);
+var thermostatModules = Modules.InDomain(MODULES_DOMAIN).OfDeviceType("Thermostat");
+
+//Initialisation for Scheduler
+thermostatModules.Each((thermostat)=&gt;{
+    Program.RaiseEvent(thermostat, PARAMETER_SCHEDULERMEM_MODULE, "", EVENT_DESCRIPTION);
+    return false;
+  });
+
+/*
+Simplifier le code en ajouant des fonctions
+
+Trouver un moyen d'initialiser les liens vers les modules afin d'optimiser le code en ne les chargeeant qu'une seule fois.
+
+Faire une fonction d'initialisation/Test qui permet de setter des tableaux de correspondance
+*/
+/* Function */
+var getmodule = new Func&lt;String,ModuleHelper&gt;((domainAddress)=&gt;{
+  string domain = "";
+  string address = "";
+
+  // Get a reference to the temperature module
+  if (domainAddress != "" &amp;&amp; domainAddress.LastIndexOf(":") &gt; 0)
+  {
+    domain = domainAddress.Substring(0, domainAddress.LastIndexOf(":"));
+    address = domainAddress.Substring(domainAddress.LastIndexOf(":") + 1);
+  }
+  ModuleHelper module = Modules.InDomain(domain).WithAddress(address).Get();
+  if (String.IsNullOrWhiteSpace(domain) || String.IsNullOrWhiteSpace(address) || module.Instance == null)
+  {
+    return null;
+  }
+  return module;
+});
+
+var ThermostatLogicRun = new Func&lt;ModuleHelper, bool&gt;((thermostat)=&gt;{
+
+  var temperature = thermostat.Parameter("Sensor.Temperature");
+  var operatingState = thermostat.Parameter("Thermostat.OperatingState");
+  var thermostatMode = thermostat.Parameter("Thermostat.Mode");
+  
+  var lastactivity = thermostat.Parameter("Thermostat.LastActivity");
+ 
+  var heatSetPoint_absence = thermostat.Parameter("Thermostat.SetPoint.Absence");
+  if(heatSetPoint_absence.DecimalValue&lt;= 0) Program.RaiseEvent(thermostat, "Thermostat.SetPoint.Absence", "15", EVENT_DESCRIPTION);
+  var heatSetPoint_presence = thermostat.Parameter("Thermostat.SetPoint.Presence");
+  if(heatSetPoint_presence.DecimalValue&lt;= 0) Program.RaiseEvent(thermostat, "Thermostat.SetPoint.Presence", "20", EVENT_DESCRIPTION);
+  
+  var circulatordelay = thermostat.Parameter(PARAMETER_CIRCULATOR_TIME_MODULE).DecimalValue;
+  var hysteresis = thermostat.Parameter(PARAMETER_HYSTERESIS_MODULE).DecimalValue;
+  
+  var minimalactivity = thermostat.Parameter(PARAMETER_MINIMAL_ACTIVITY_MODULE).DecimalValue;
+  
+  var activity_counter = thermostat.Parameter("Thermostat.Counter.Activity");
+  TimeSpan span_activity_counter = new TimeSpan(0, 0, 0, 0);
+  bool spansucess =false;
+  if(activity_counter.Value != null &amp;&amp; activity_counter.Value != ""){
+    try{
+       span_activity_counter = TimeSpan.ParseExact(activity_counter.Value, TimeSpan_Format, null);
+       spansucess =true;
+    }catch{
+      span_activity_counter = new TimeSpan(0, 0, 0, 0);
+    } 
+  }
+  if(!spansucess)Program.RaiseEvent(thermostat, "Thermostat.Counter.Activity", span_activity_counter.ToString(TimeSpan_Format), EVENT_DESCRIPTION);
+
+  
+  var index = int.Parse(thermostat.Instance.Address) - 1;
+  
+  try
+  {
+    // Get a reference to the temperature module
+    var temperatureModule = getmodule(thermostat.Parameter(PARAMETER_TEMPERATURE_MODULE).Value);
+    if(temperatureModule == null){
+      Program.RaiseEvent(thermostat, "Thermostat.OperatingState", "Idle", EVENT_DESCRIPTION);
+      Program.Notify(EVENT_DESCRIPTION + thermostat.Instance.Address, "Please specify a valid temperature module.");
+      return false;
+    }
+    // Update Thermostat module Temperature field
+    temperature.Value = temperatureModule.Parameter("Sensor.Temperature").Value;
+
+    // get a reference to the switch/relay module
+    var switchModule = getmodule(thermostat.Parameter(PARAMETER_SWITCH_MODULE).Value);
+    if(switchModule == null){
+      Program.RaiseEvent(thermostat, "Thermostat.OperatingState", "Idle", EVENT_DESCRIPTION);
+      Program.Notify(EVENT_DESCRIPTION + thermostat.Instance.Address, "Please specify a valid switch module.");
+      return false;
+    }
+
+    // get a reference to the switch/relay circulator module
+    var switchcirculatorModule = getmodule(thermostat.Parameter(PARAMETER_SWITCH_CIRCULATOR_MODULE).Value);
+    
+    // Heat Mode logic
+    if (thermostatMode.Value == "Absence" || thermostatMode.Value == "Presence")
+    {
+      //Select the good mode
+      var heatSetPoint=heatSetPoint_absence;
+      if(thermostatMode.Value == "Presence")
+      {
+        heatSetPoint=heatSetPoint_presence;
+      }
+      
+      var dt_origine = DateTime.Now.AddMinutes (minimalactivity); 
+      if (lastactivity != null &amp;&amp; lastactivity.Value != ""){
+        dt_origine = DateTime.ParseExact(lastactivity.Value, DateTime_Format, System.Globalization.CultureInfo.InvariantCulture); 
+      }else{
+        dt_origine = DateTime.Now.AddMinutes (-minimalactivity); 
+        Program.RaiseEvent(thermostat, "Thermostat.LastActivity", dt_origine.ToString(DateTime_Format), EVENT_DESCRIPTION);
+      }
+      
+      if (temperature.DecimalValue &lt; heatSetPoint.DecimalValue)
+      {
+        //if (switchModule.IsOff) holdingMode[index] = false;
+        if (operatingState.Value != "Heating")
+        {
+          Program.RaiseEvent(thermostat, "Thermostat.OperatingState", "Heating", EVENT_DESCRIPTION);
+        }
+        // Heating
+        if (switchModule.IsOff){
+          switchModule.On();
+          //Update Circulateur Time
+          Program.RaiseEvent(thermostat, "Thermostat.LastActivity", DateTime.Now.ToString(DateTime_Format), EVENT_DESCRIPTION);
+        }
+        if (switchcirculatorModule != null &amp;&amp; switchcirculatorModule.IsOff) switchcirculatorModule.On();  
+      }
+      else if(temperature.DecimalValue &gt; heatSetPoint.DecimalValue + hysteresis &amp;&amp; DateTime.Compare (dt_origine.AddMinutes (minimalactivity), DateTime.Now) &lt; 0 )
+      {
+          if (operatingState.Value != "PendingHeat")
+          {
+            Program.RaiseEvent(thermostat, "Thermostat.OperatingState", "PendingHeat", EVENT_DESCRIPTION);
+          }
+          // Waiting
+          if (switchModule.IsOn){
+            switchModule.Off();
+            //Store TimeSpan
+            span_activity_counter = span_activity_counter.Add(DateTime.Now - dt_origine);
+            Program.RaiseEvent(thermostat, "Thermostat.Counter.Activity", span_activity_counter.ToString(TimeSpan_Format), EVENT_DESCRIPTION);
+            //Update the last activity 
+            dt_origine = DateTime.Now;
+            Program.RaiseEvent(thermostat, "Thermostat.LastActivity", DateTime.Now.ToString(DateTime_Format), EVENT_DESCRIPTION);
+          }
+      }
+      if (switchModule.IsOff &amp;&amp; switchcirculatorModule != null &amp;&amp; switchcirculatorModule.IsOn){
+          //Program.Notify(EVENT_DESCRIPTION + thermostat.Instance.Address, "Compare: " + DateTime.Compare (dt_origine.AddMinutes (circulatordelay), DateTime.Now));
+          if(DateTime.Compare (dt_origine.AddMinutes (circulatordelay), DateTime.Now) &lt; 0) switchcirculatorModule.Off();
+      } 
+    }
+    else
+    {
+      if (operatingState.Value != "Off" &amp;&amp; operatingState.Value != "Idle")
+      {
+        Program.RaiseEvent(thermostat, "Thermostat.OperatingState", "Idle", EVENT_DESCRIPTION);
+       // holdingMode[index] = false;
+      }
+      // Off
+      if (switchModule.IsOn)switchModule.Off();
+      if (switchcirculatorModule != null &amp;&amp; switchcirculatorModule.IsOn)switchcirculatorModule.Off();
+    }  
+  } 
+  catch (Exception e) 
+  {
+    Program.Notify(EVENT_DESCRIPTION + thermostat.Instance.Address, "ERROR: " + e.Message);
+  }
+
+  return true;
+});
+
+When.ModuleParameterChanged((module, parameter)=&gt;{
+  if (parameter.Is("Sensor.Temperature"))
+  {
+    thermostatModules.Each((thermostat)=&gt;{
+      var domainAddress = thermostat.Parameter(PARAMETER_TEMPERATURE_MODULE).Value;
+      if (domainAddress != "" &amp;&amp; domainAddress.IndexOf(":") &gt; 0)
+      {
+        var separatorIndex = domainAddress.LastIndexOf(':');
+        if (separatorIndex &gt; 0) 
+        {
+          var domain = domainAddress.Substring(0, separatorIndex).ToLower();
+          var address = domainAddress.Substring(separatorIndex + 1).ToLower();
+          if (module.Instance.Domain.ToLower() == domain &amp;&amp; module.Instance.Address.ToLower() == address)
+          {
+            Program.RaiseEvent(thermostat, "Sensor.Temperature", parameter.Value, EVENT_DESCRIPTION);
+            ThermostatLogicRun(thermostat);
+          }
+        }
+      }
+      return false;
+    });
+  }
+  return true;
+});
+
+// implement Web API calls as defined in the Thermostat widget
+When.WebServiceCallReceived(MODULES_DOMAIN, (args)=&gt;{
+  var res = "ERROR";
+  var cmdArgs = args.ToString().Split('/');
+  var address = cmdArgs[1];
+  var command = cmdArgs[2];
+  var option = cmdArgs[3];
+  var thermostat = Modules.InDomain(MODULES_DOMAIN).WithAddress(address).Get();
+  var index = int.Parse(thermostat.Instance.Address) - 1;
+  switch (command)
+  {
+    case "Thermostat.SetPointSet":
+    if (option == "Absence"|| option == "Presence" )
+    {
+      string setPoint = cmdArgs[4];
+      Program.RaiseEvent(thermostat, "Thermostat.SetPoint." + option, setPoint, EVENT_DESCRIPTION);
+      ThermostatLogicRun(thermostat);
+      res = "OK";
+    }
+    break;
+    case "Thermostat.ModeSet":
+    if (option == "Off" || option == "Absence" || option == "Presence")
+    {
+      Program.RaiseEvent(thermostat, "Thermostat.Mode", option, EVENT_DESCRIPTION);
+      ThermostatLogicRun(thermostat);
+      res = "OK";
+    }
+    break;
+    case "Thermostat.SchedulerSet":
+    if (option == "Off" || option == "Absence" || option == "Presence")
+    {
+       if(thermostat.Parameter("Thermostat.Mode").Value != "Off"){
+          Program.RaiseEvent(thermostat, "Thermostat.Mode", option, EVENT_DESCRIPTION);
+          Program.RaiseEvent(thermostat, PARAMETER_SCHEDULERMEM_MODULE, option, EVENT_DESCRIPTION);
+          ThermostatLogicRun(thermostat);
+          res = "OK";
+       }
+    }
+    break;
+  }
+  return "[{ \"ResponseValue\" : " + res + "}]";
+});
+
+while (Program.IsEnabled)
+{    
+
+  thermostatModules.Each((thermostat)=&gt;{
+    ThermostatLogicRun(thermostat);
+    return false;
+  });
+  Pause(120);
+}</ScriptSource>
+  <ScriptErrors>[]</ScriptErrors>
+  <Domain>HomeAutomation.HomeGenie.Automation</Domain>
+  <Address>1001</Address>
+  <Name>Advanced Thermostat</Name>
+  <Description>Use any temperature sensor and relay switch module to implement Thermostat device logic.
+Temperature/Switch modules must be specified in the form &lt;i&gt;&amp;lt;domain&amp;gt:&amp;lt;address&amp;gt;&lt;/i&gt;, eg: HomeAutomation.ZWave:5 .
+Basic Thermostats can also be used with the Timetable scheduler widget.</Description>
+  <Group>SmartControl</Group>
+  <Features>
+    <ProgramFeature>
+      <FieldType>module.text:any:any:sensor.temperature</FieldType>
+      <ForDomains>HomeAutomation.AdvancedThermostat</ForDomains>
+      <ForTypes>Thermostat</ForTypes>
+      <Property>VirtualThermostat.TemperatureModule</Property>
+      <Description>Module to read temperature from</Description>
+    </ProgramFeature>
+    <ProgramFeature>
+      <FieldType>module.text:any:switch,light,dimmer,thermostat,shutter:any</FieldType>
+      <ForDomains>HomeAutomation.AdvancedThermostat</ForDomains>
+      <ForTypes>Thermostat</ForTypes>
+      <Property>VirtualThermostat.SwitchModule</Property>
+      <Description>Module to switch on/off on set point</Description>
+    </ProgramFeature>
+    <ProgramFeature>
+      <FieldType>module.text:any:switch,light,dimmer,thermostat,shutter:any</FieldType>
+      <ForDomains>HomeAutomation.AdvancedThermostat</ForDomains>
+      <ForTypes>Thermostat</ForTypes>
+      <Property>VirtualThermostat.SwitchCirculator</Property>
+      <Description>Module to switch on/off for circulator</Description>
+    </ProgramFeature>
+    <ProgramFeature>
+      <FieldType>slider:0:60:1</FieldType>
+      <ForDomains>HomeAutomation.AdvancedThermostat</ForDomains>
+      <ForTypes>Thermostat</ForTypes>
+      <Property>VirtualThermostat.CirculatorUpTime</Property>
+      <Description>Time up for circulator (minutes)</Description>
+    </ProgramFeature>
+    <ProgramFeature>
+      <FieldType>slider:0:5:0.1</FieldType>
+      <ForDomains>HomeAutomation.AdvancedThermostat</ForDomains>
+      <ForTypes>Thermostat</ForTypes>
+      <Property>VirtualThermostat.Hysteresis</Property>
+      <Description>Hysteresis consigne</Description>
+    </ProgramFeature>
+    <ProgramFeature>
+      <FieldType>slider:0:60:1</FieldType>
+      <ForDomains>HomeAutomation.AdvancedThermostat</ForDomains>
+      <ForTypes>Thermostat</ForTypes>
+      <Property>VirtualThermostat.MinimalActivityTime</Property>
+      <Description>Minimal activity time (minutes)</Description>
+    </ProgramFeature>
+  </Features>
+  <ActivationTime xsi:nil="true" />
+  <TriggerTime>2019-10-20T08:17:25.683252Z</TriggerTime>
+  <Type>CSharp</Type>
+  <IsEnabled>true</IsEnabled>
+</ProgramBlock>

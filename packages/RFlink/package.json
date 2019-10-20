@@ -20,6 +20,13 @@
             "description": "RFLink program for add remote RF modules",
             "uid": "100801",
             "group": "RFLink" 
+        },
+        { 
+            "file": "RFLinkRemoteControler.hgx",
+            "name":"RFLink RemoteControler",
+            "description": "RFLink program for add remote RF modules",
+            "uid": "100802",
+            "group": "RFLink" 
         }
     ],
     "interfaces": [

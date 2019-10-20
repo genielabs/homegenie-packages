@@ -1,0 +1,20 @@
+{
+    "author": "Gael Le Pennec",
+    "version": "v1.0",
+    "title": "RFLink Widgets",
+    "description": "Adds RFLink control capability to HomeGenie",
+    "published": "2017-10-30T00:00:00Z",
+    "sourcecode": "",
+    "homepage": "", 
+    "widgets": [],
+    "programs": [
+        { 
+            "file": "PelletStove.hgx",
+            "name":"PelletStove",
+            "description": "PelletStove program for control PelletStove",
+            "uid": "100503",
+            "group": "RemoteControl" 
+        }
+    ],
+    "interfaces": []
+}

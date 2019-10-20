@@ -1,0 +1,193 @@
+<?xml version="1.0" encoding="utf-16"?>
+<ProgramBlock xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <ConditionType>OnTrue</ConditionType>
+  <Conditions />
+  <Commands />
+  <ScriptCondition>const string MODULES_DOMAIN = "HomeAutomation.ESXIControler";
+const string OPTION_COUNT = "VirtualThermostat.NumberModule";
+const string PARAMETER_MAC = "ESXIControler.MAC";
+const string PARAMETER_BROADCAST = "ESXIControler.BroadCast";
+const string PARAMETER_PROCESSNAME = "ESXIControler.ProcessName";
+const string PARAMETER_PROCESSARG = "ESXIControler.ProcessArg";
+
+Program
+  .AddOption(OPTION_COUNT, "1", "Virtual ESXI Controler modules to create", "slider:1:10:1")
+  .AddFeature(MODULES_DOMAIN, "Switch", PARAMETER_MAC, "MAC Address for WOL sending", "text")
+  .AddFeature(MODULES_DOMAIN, "Switch", PARAMETER_BROADCAST, "Broadcast Address for WOL sending Ex: 192.168.0.255", "text")
+  .AddFeature(MODULES_DOMAIN, "Switch", PARAMETER_PROCESSNAME, "Name of Process for Off action", "text")
+  .AddFeature(MODULES_DOMAIN, "Switch", PARAMETER_PROCESSARG, "Args of Process for Off action", "text")
+  .Run();</ScriptCondition>
+  <ScriptSource>const string MODULES_DOMAIN = "HomeAutomation.ESXIControler";
+const string OPTION_COUNT = "VirtualThermostat.NumberModule";
+const string PARAMETER_MAC = "ESXIControler.MAC";
+const string PARAMETER_BROADCAST = "ESXIControler.BroadCast";
+const string PARAMETER_PROCESSNAME = "ESXIControler.ProcessName";
+const string PARAMETER_PROCESSARG = "ESXIControler.ProcessArg";
+
+const string EVENT_DESCRIPTION = "ESXI Controler";
+
+var WidgetCount = (int)Program.Option(OPTION_COUNT).DecimalValue;
+if (WidgetCount &lt;= 0) WidgetCount = 1;
+Program.AddVirtualModules(MODULES_DOMAIN, "Switch", "homegenie/generic/switch", 1, WidgetCount);
+var ListModules = Modules.InDomain(MODULES_DOMAIN).OfDeviceType("Switch");
+
+
+var ExecuteProcess = new Action&lt;string, string&gt;((Name,Args)=&gt;{
+    try{
+        var proc = new System.Diagnostics.Process {
+            StartInfo = new System.Diagnostics.ProcessStartInfo {
+                FileName = Name,
+                Arguments = Args,
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                CreateNoWindow = true
+            }
+        };
+        proc.Start();
+        while (!proc.StandardOutput.EndOfStream) {
+            string line = proc.StandardOutput.ReadLine();
+            //
+            Program.Notify(EVENT_DESCRIPTION + " : SHELL COMMAND", line);
+            Pause(1);
+        }
+
+    } 
+    catch (Exception e) 
+    {
+        Program.Notify(EVENT_DESCRIPTION + " : ERROR", e.Message);
+    }
+});
+
+var SendWakeOnLan = new Action&lt;string, string&gt;((MACAddress,BroadcastAddress)=&gt;{
+    try{
+        // Remove '-'
+        if (MACAddress.Contains("-")) { MACAddress = MACAddress.Replace("-", String.Empty); }
+        // Remove ':'
+        if (MACAddress.Contains(":")) { MACAddress = MACAddress.Replace(":", String.Empty); }
+
+        // Build Magic packet as string, begin with 6 times 0xFF and then 16 times the MAC address
+        string MagicPacket = 
+          String.Format("FFFFFFFFFFFF{0}{0}{0}{0}{0}{0}{0}{0}{0}{0}{0}{0}{0}{0}{0}{0}", MACAddress);
+
+        // Create a byte array from the magic packet string
+        byte[] packet = System.Runtime.Remoting.Metadata.W3cXsd2001.SoapHexBinary.Parse(MagicPacket).Value;
+
+        // Prepare UdpClient
+        using (System.Net.Sockets.UdpClient client = new System.Net.Sockets.UdpClient())
+        {
+          client.Connect(BroadcastAddress, 4343);
+          // Send the Magic packet.
+          client.Send(packet, packet.Length);
+        }
+    } 
+    catch (Exception e) 
+    {
+        Program.Notify(EVENT_DESCRIPTION + " : ERROR", e.Message);
+    }
+});
+
+
+When.WebServiceCallReceived(MODULES_DOMAIN, ( args ) =&gt; 
+{
+  string[] reqs = ((string)args).Split('/');
+  var res = "{ 'ResponseValue' : 'ERROR' }";
+  try
+  {
+    string switchnumber = reqs[1];
+    string command = reqs[2];
+    var module = ListModules.WithAddress(switchnumber).Get();
+    
+    //Search all properties
+    string _mac = module.Parameter(PARAMETER_MAC)?.Value;
+    string _broadcast = module.Parameter(PARAMETER_BROADCAST)?.Value;
+    string _processname = module.Parameter(PARAMETER_PROCESSNAME)?.Value;
+    string _processarg = module.Parameter(PARAMETER_PROCESSARG)?.Value;
+    
+    if(_mac == "" || _broadcast == "" || _processname == "" ){
+       Program.Notify(EVENT_DESCRIPTION, "Error: incomplet features data");
+      return "{ 'ResponseValue' : 'ERROR' }";
+    }
+    
+    int result= -1;
+    switch(command)
+    {
+      case "Control.On":
+        result = 1;
+        break;
+      case "Control.Off":
+        result = 0;
+        break;
+      case "Control.Toggle":
+        if (module.Parameter("Status.Level").DecimalValue == 0)
+        {
+          result = 1;
+        }
+        else
+        {
+          result = 0;
+        }
+        break;
+    }
+    if(result&gt;=0){
+      	if(result == 1){
+       	  SendWakeOnLan(_mac,_broadcast);
+        }else{
+          ExecuteProcess(_processname,_processarg);
+        }
+        Program.RaiseEvent(module, "Status.Level", result.ToString(), EVENT_DESCRIPTION);
+		res = "{ 'ResponseValue' : 'OK' }";
+    }
+
+    
+  } 
+  catch (Exception e) 
+    {
+        Program.Notify(EVENT_DESCRIPTION + " : ERROR", e.Message);
+	}
+  return res;
+});
+
+Program.GoBackground();
+
+</ScriptSource>
+  <ScriptErrors>[]</ScriptErrors>
+  <Domain>HomeAutomation.HomeGenie.Automation</Domain>
+  <Address>1005</Address>
+  <Name>ESXI Controler</Name>
+  <Description />
+  <Group>MyCode</Group>
+  <Features>
+    <ProgramFeature>
+      <FieldType>text</FieldType>
+      <ForDomains>HomeAutomation.ESXIControler</ForDomains>
+      <ForTypes>Switch</ForTypes>
+      <Property>ESXIControler.MAC</Property>
+      <Description>MAC Address for WOL sending</Description>
+    </ProgramFeature>
+    <ProgramFeature>
+      <FieldType>text</FieldType>
+      <ForDomains>HomeAutomation.ESXIControler</ForDomains>
+      <ForTypes>Switch</ForTypes>
+      <Property>ESXIControler.BroadCast</Property>
+      <Description>Broadcast Address for WOL sending Ex: 192.168.0.255</Description>
+    </ProgramFeature>
+    <ProgramFeature>
+      <FieldType>text</FieldType>
+      <ForDomains>HomeAutomation.ESXIControler</ForDomains>
+      <ForTypes>Switch</ForTypes>
+      <Property>ESXIControler.ProcessName</Property>
+      <Description>Name of Process for Off action</Description>
+    </ProgramFeature>
+    <ProgramFeature>
+      <FieldType>text</FieldType>
+      <ForDomains>HomeAutomation.ESXIControler</ForDomains>
+      <ForTypes>Switch</ForTypes>
+      <Property>ESXIControler.ProcessArg</Property>
+      <Description>Args of Process for Off action</Description>
+    </ProgramFeature>
+  </Features>
+  <ActivationTime xsi:nil="true" />
+  <TriggerTime>2019-10-20T08:17:26.049977Z</TriggerTime>
+  <Type>CSharp</Type>
+  <IsEnabled>true</IsEnabled>
+</ProgramBlock>

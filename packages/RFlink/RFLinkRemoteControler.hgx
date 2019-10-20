@@ -1,0 +1,194 @@
+<?xml version="1.0" encoding="utf-16"?>
+<ProgramBlock xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <ConditionType>OnSwitchTrue</ConditionType>
+  <Conditions />
+  <Commands />
+  <ScriptCondition>const string MODULES_DOMAIN = "RFLinkRemoteControler";
+
+const string OPTION_REMOTECOUNT = "RemoteCount";
+
+const string PARAMETER_PROTOCOLNAME = "RFLink.ProtocolName";
+const string PARAMETER_ID = "RFLink.Id";
+const string PARAMETER_CHANNEL = "RFLink.Channel";
+const string PARAMETER_ON_COMMANDNAME = "RFLink.On_CommandName";
+const string PARAMETER_OFF_COMMANDNAME = "RFLink.Off_CommandName";
+
+Program
+  
+  .AddOption(OPTION_REMOTECOUNT, "1", "Virtual remote modules to create", "slider:1:10:1")
+  
+  .AddFeature(MODULES_DOMAIN, "Switch", PARAMETER_PROTOCOLNAME, "Protocol Name describe in manual  RFLink manual http://www.rflink.nl/blog2/protref", "text")
+  .AddFeature(MODULES_DOMAIN, "Switch", PARAMETER_ID, "Module Adress Destination", "text")
+  .AddFeature(MODULES_DOMAIN, "Switch", PARAMETER_CHANNEL, "Channel Number in hexadecimal", "text")
+  .AddFeature(MODULES_DOMAIN, "Switch", PARAMETER_ON_COMMANDNAME, "We can changed with ON/OFF/ALLON/ALLOFF/UP/DOWN/STOP/PAIR/ etc.", "text")
+  .AddFeature(MODULES_DOMAIN, "Switch", PARAMETER_OFF_COMMANDNAME, "We can changed with ON/OFF/ALLON/ALLOFF/UP/DOWN/STOP/PAIR/ etc.", "text")
+  
+  .Run();
+</ScriptCondition>
+  <ScriptSource>const string EVENT_DESCRIPTION = "RFLinkRemoteControler";
+
+const string MODULES_DOMAIN = "RFLinkRemoteControler";
+
+const string OPTION_REMOTECOUNT = "RemoteCount";
+
+const string PARAMETER_PROTOCOLNAME = "RFLink.ProtocolName";
+const string PARAMETER_ID = "RFLink.Id";
+const string PARAMETER_CHANNEL = "RFLink.Channel";
+const string PARAMETER_ON_COMMANDNAME = "RFLink.On_CommandName";
+const string PARAMETER_OFF_COMMANDNAME = "RFLink.Off_CommandName";
+
+const string PARAMETER_STATUS = "Status.ConnectionState";
+
+var virtualwidgetcount = (int)Program.Option(OPTION_REMOTECOUNT).DecimalValue;
+if (virtualwidgetcount &lt;= 0) virtualwidgetcount = 1;
+Program.AddVirtualModules(MODULES_DOMAIN, "Switch", "rflink/remote/switch", 1, virtualwidgetcount);
+
+var ListModules = Modules.InDomain(MODULES_DOMAIN);
+var parentModule = Modules.InDomain("HomeAutomation.RFLink").WithAddress("1").Get();
+bool _mailsended =false;
+
+var FctRemoteRFLink = new Func&lt;string,string,string,string, bool&gt;((_protocolname,_moduleid,_channel,_commandname)=&gt;{
+  try{
+    if (parentModule == null ) parentModule = Modules.InDomain("HomeAutomation.RFLink").WithAddress("1").Get();
+    parentModule.Command("Control.Remote").Set(_protocolname + "/" + _moduleid  + "/" + _channel + "/" + _commandname + "/true" );
+
+  }catch(Exception ex){
+	 Program.Notify(EVENT_DESCRIPTION, "Error:" + ex.Message);
+  }
+  return false;
+});
+
+
+
+// implement Web API calls as defined in the Thermostat widget
+When.WebServiceCallReceived(MODULES_DOMAIN, (args)=&gt;{
+  try{
+    var res = "ERROR";
+    var cmdArgs = args.ToString().Split('/');
+    string address = cmdArgs[1];
+    string command = cmdArgs[2];
+    //string option = cmdArgs[3];
+    var module = ListModules.WithAddress(address).Get();
+    
+    //Search all properties
+    string _protocolname = module.Parameter(PARAMETER_PROTOCOLNAME)?.Value;
+    string _moduleid = module.Parameter(PARAMETER_ID)?.Value;
+    string _channel = module.Parameter(PARAMETER_CHANNEL)?.Value;
+    string _commandname_on = module.Parameter(PARAMETER_ON_COMMANDNAME)?.Value;
+    string _commandname_off = module.Parameter(PARAMETER_OFF_COMMANDNAME)?.Value;
+
+    if(_protocolname == "" || _moduleid == "" || _channel == "" || _commandname_on == "" ){
+       Program.Notify(EVENT_DESCRIPTION, "Error: incomplet features data");
+      return "{ 'ResponseValue' : 'ERROR' }";
+    }
+    
+    bool stat = false;
+    
+    switch(command)
+    {
+      case "Control.On":
+        {
+            stat=true;
+        }
+        break;
+      case "Control.Off":
+        if(_commandname_off == ""){
+          return "{ 'ResponseValue' : 'ERROR' }";
+        }
+        break;
+      case "Control.Toggle":
+      	if(_commandname_off == ""){
+          return "{ 'ResponseValue' : 'ERROR' }";
+        }
+        if (module.IsOff )stat=true;
+        break;
+      default: 
+       return "{ 'ResponseValue' : 'ERROR' }";
+    }
+    
+    FctRemoteRFLink(_protocolname,_moduleid,_channel,stat ? _commandname_on : _commandname_off);
+    Program.RaiseEvent(module, "Status.Level", stat ? "1":"0", EVENT_DESCRIPTION);
+    return "{ 'ResponseValue' : 'OK' }";   
+  }catch(Exception ex){
+	 Program.Notify(EVENT_DESCRIPTION, "Error:" + ex.Message);
+  }
+  return "{ 'ResponseValue' : 'ERROR' }";
+});
+
+while (Program.IsEnabled)
+{
+  if (parentModule == null ) parentModule = Modules.InDomain("HomeAutomation.RFLink").WithAddress("1").Get();
+  var status = parentModule.Parameter(PARAMETER_STATUS);
+  if(status == null || status.Value == null || status.Value != "Connected"){
+    if(!_mailsended){
+ 		  //Send Mail 
+           string recipients = "hypernas1511@gmail.com";
+           string subject = "Avertissement HomeGenie : Perte communication" ;
+           string messagetext = "Une absence de communication avec la passerelle RFLINK vient d'être constaté' " ;
+           try{
+                   Program.RunAsyncTask(()=&gt;{
+                    Net.SendMessage(recipients, subject, messagetext);
+                     _mailsended=true;
+                   });
+           }catch(Exception ex){
+             Program.Notify(EVENT_DESCRIPTION, "Error:" + ex.Message);
+             _mailsended=false;
+           }
+    }
+  } else{
+    _mailsended=false;
+  }
+  Pause(120);
+}
+
+</ScriptSource>
+  <ScriptErrors />
+  <Domain>HomeAutomation.HomeGenie.Automation</Domain>
+  <Address>1002</Address>
+  <Name>RFLinkRemoteControler</Name>
+  <Description>Program for create new  virtual module associate with  remote command  widget for RFLink Gateway
+You can ajust properties module after  creation.
+For more details you can read RFLink manual http://www.rflink.nl/blog2/protref  to ajust properties with good values.</Description>
+  <Group>MyCode</Group>
+  <Features>
+    <ProgramFeature>
+      <FieldType>text</FieldType>
+      <ForDomains>RFLinkRemoteControler</ForDomains>
+      <ForTypes>Switch</ForTypes>
+      <Property>RFLink.ProtocolName</Property>
+      <Description>Protocol Name describe in manual  RFLink manual http://www.rflink.nl/blog2/protref</Description>
+    </ProgramFeature>
+    <ProgramFeature>
+      <FieldType>text</FieldType>
+      <ForDomains>RFLinkRemoteControler</ForDomains>
+      <ForTypes>Switch</ForTypes>
+      <Property>RFLink.Id</Property>
+      <Description>Module Adress Destination</Description>
+    </ProgramFeature>
+    <ProgramFeature>
+      <FieldType>text</FieldType>
+      <ForDomains>RFLinkRemoteControler</ForDomains>
+      <ForTypes>Switch</ForTypes>
+      <Property>RFLink.Channel</Property>
+      <Description>Channel Number in hexadecimal</Description>
+    </ProgramFeature>
+    <ProgramFeature>
+      <FieldType>text</FieldType>
+      <ForDomains>RFLinkRemoteControler</ForDomains>
+      <ForTypes>Switch</ForTypes>
+      <Property>RFLink.On_CommandName</Property>
+      <Description>We can changed with ON/OFF/ALLON/ALLOFF/UP/DOWN/STOP/PAIR/ etc.</Description>
+    </ProgramFeature>
+    <ProgramFeature>
+      <FieldType>text</FieldType>
+      <ForDomains>RFLinkRemoteControler</ForDomains>
+      <ForTypes>Switch</ForTypes>
+      <Property>RFLink.Off_CommandName</Property>
+      <Description>We can changed with ON/OFF/ALLON/ALLOFF/UP/DOWN/STOP/PAIR/ etc.</Description>
+    </ProgramFeature>
+  </Features>
+  <ActivationTime xsi:nil="true" />
+  <TriggerTime>2019-10-20T08:17:26.061183Z</TriggerTime>
+  <Type>CSharp</Type>
+  <IsEnabled>true</IsEnabled>
+</ProgramBlock>

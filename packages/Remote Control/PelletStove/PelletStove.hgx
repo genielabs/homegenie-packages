@@ -1,0 +1,211 @@
+<?xml version="1.0" encoding="utf-16"?>
+<ProgramBlock xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <ConditionType>OnTrue</ConditionType>
+  <Conditions />
+  <Commands />
+  <ScriptCondition>const string OPTION_IP = "IPAddress";
+const string OPTION_PORT = "Port";
+const string OPTION_LOGIN = "Login";
+const string OPTION_PASSWORD = "Password";
+
+Program
+  .AddOption(OPTION_IP, "192.168.1.237", "0. Enter IP address of Network Relays", "text")
+  .AddOption(OPTION_PORT, "80", "1. Enter port of Network relays", "text")
+  .AddOption(OPTION_LOGIN, "admin", "1. Enter port of Network relays", "text")
+  .AddOption(OPTION_PASSWORD, "admin", "1. Enter port of Network relays", "password")
+  .Run();
+</ScriptCondition>
+  <ScriptSource>const string MODULES_DOMAIN = "HomeAutomation.WifiPelletStove";
+
+const string OPTION_IP = "IPAddress";
+const string OPTION_PORT = "Port";
+const string OPTION_LOGIN = "Login";
+const string OPTION_PASSWORD = "Password";
+
+const string PARAMETER_EMPTYPELLET = "Status.EmptyPellet";
+
+const string EVENT_DESCRIPTION = "Wifi Pellet Stove";
+
+
+
+//Alpha Smart Home remote controller (8 relays)
+Program.AddVirtualModules(MODULES_DOMAIN, "Switch", "homegenie/generic/switch", 1 , 1);
+var ListModules = Modules.InDomain(MODULES_DOMAIN);
+Program.Parameter("Status.Level").Value = "1";
+
+	string server = Program.Option(OPTION_IP).Value.Trim();
+	string port = Program.Option(OPTION_PORT).Value.Trim();
+	string login = Program.Option(OPTION_LOGIN).Value.Trim();
+	string password = Program.Option(OPTION_PASSWORD).Value.Trim();
+	string beginrequest = "http://" +  server + ":" + port;
+
+//Get status command
+WebClient client = null;
+int ErrorCounter = 0;
+int timeforeachrecon = 5;
+DateTime dt_LastInit = DateTime.Now.AddMinutes (-timeforeachrecon) ; 
+
+var FctSendHTTP = new Func&lt;string,string,string,string&gt;((_url,_login,_password)=&gt;{
+  try{
+	 if(_login =="" &amp;&amp; _password == ""){
+      return Net.WebService(_url).Call(); 
+     }
+     return Net.WebService(_url).WithCredentials(_login,_password).Call();
+
+  }catch(Exception ex){
+	 Program.Notify(EVENT_DESCRIPTION, "Error:" + ex.Message);
+  }
+  return null;
+});
+
+var FctTreatResult = new Func&lt;string,bool&gt;((result)=&gt;{
+  try{
+  var module = ListModules.WithAddress((1).ToString()).Get();
+  var list = new[] { new {id= "", name = "", value = "" } }.ToList();
+  /*
+  Exemple:
+        string json = @"[
+         {'id':'StoveStat_led','name':'className','value':'led-green-on'}
+        ,{'id':'StoveStat_txt','name':'innerText','value':'Running'}
+        ,{'id':'FillingStatus_led','name':'className','value':'led-green-on'}
+        ,{'id':'FillingStatus_txt','name':'innerText','value':'OK'}
+        ,{'id':'StartNumber','name':'innerText','value':'1'}
+        ,{'id':'RunningElapsed','name':'innerText','value':'1'}
+        ,{'id':'CurrentConsumption','name':'innerText','value':'3272371968'}
+        ,{'id':'AverageFlow','name':'innerText','value':'14.2857'}
+        ,{'id':'MinimalActivity','name':'innerText','value':'10'}
+        ,{'id':'QuantityByFilling','name':'innerText','value':'15000'}
+        ,{'id':'ConsumptionStartup','name':'innerText','value':'135'}
+        ,{'id':'DurationStartup','name':'innerText','value':'150'}
+        ,{'id':'ThresholdWeight','name':'innerText','value':'1000'}]";
+  */
+         var deparse = JsonConvert.DeserializeAnonymousType(result,list);
+
+        foreach (var itm in deparse)
+        {
+          bool stat = false;
+           switch(itm.id)
+          {
+            case "StoveStat_txt":
+              stat = itm.value == "Running";
+              if(module.IsOn != stat)
+              {
+                Program.RaiseEvent(module, "Status.Level", stat ? "1":"0", EVENT_DESCRIPTION);
+              }
+              break;
+            case "FillingStatus_txt":
+              stat = itm.value != "OK";
+
+              // Relay status changed by wall switch (!=)
+              var ret = module.Parameter(PARAMETER_EMPTYPELLET).DecimalValue;
+              if(ret == 0 &amp; stat || ret != 0 &amp; !stat)
+              {
+                Program.RaiseEvent(module, PARAMETER_EMPTYPELLET, stat ? "1":"0", EVENT_DESCRIPTION);
+              }
+
+              break;
+            case "4":
+              break;
+          }
+        }
+  return true;
+  }catch(Exception ex){
+	 Program.Notify(EVENT_DESCRIPTION, "Error:" + ex.Message);
+  }
+  return false;
+});
+
+var SendCommand = new Action&lt;bool&gt;((Value)=&gt;{
+      //OFF Comamnd
+      try{
+           //FillingReset for reset the filling counter
+           var request = beginrequest +"/Cmd?cmd_pelletstove=" + (Value ? "Start" : "Stop");
+           var res = FctSendHTTP(request ,login,password);
+      }catch(Exception ex){
+        Program.Notify(EVENT_DESCRIPTION, "Error:" + ex.Message);
+      }
+});
+
+When.WebServiceCallReceived(MODULES_DOMAIN, ( args ) =&gt; 
+{
+  string[] reqs = ((string)args).Split('/');
+  var res = "{ 'ResponseValue' : 'ERROR' }";
+  try
+  {
+    string switchnumber = reqs[1];
+    string command = reqs[2];
+    var module = ListModules.WithAddress(switchnumber).Get();
+    int result= -1;
+  switch(command)
+  {
+    case "Control.On":
+      result = 1;
+      break;
+    case "Control.Off":
+      result = 0;
+      break;
+    case "Control.Toggle":
+      if (module.Parameter("Status.Level").DecimalValue == 0)
+      {
+        result = 1;
+      }
+      else
+      {
+        result = 0;
+      }
+      break;
+  }
+    if(result&gt;=0){
+            Program.RaiseEvent(module, "Status.Level", result.ToString(), EVENT_DESCRIPTION);
+            SendCommand(result==1?true:false);
+       		Pause(1);
+     	    res = "{ 'ResponseValue' : 'OK' }";
+    }
+
+    
+  } 
+  catch (Exception e) 
+    {
+        Program.Notify(EVENT_DESCRIPTION+" : ERROR", e.Message);
+	    res = e.Message + " " + e.StackTrace;
+	}
+  return res;
+});
+
+       
+while (Program.IsEnabled)
+{	
+  	try
+  	{
+      Program.RunAsyncTask(()=&gt;{
+        var res = FctSendHTTP(beginrequest + "/Get_Ajax",login,password);
+        if(res != null){  
+          FctTreatResult(res);
+         
+        }else{
+          //No response
+           Program.Notify(EVENT_DESCRIPTION+" : ERROR","Absence de réponse du module wifi");
+        }
+      });
+    }
+    catch (Exception e) 
+    {
+      	ErrorCounter ++;
+        Program.Notify(EVENT_DESCRIPTION+" : ERROR", e.Message);
+	}
+ 	Pause(10);
+}
+Program.GoBackground();
+</ScriptSource>
+  <ScriptErrors />
+  <Domain>HomeAutomation.HomeGenie.Automation</Domain>
+  <Address>1008</Address>
+  <Name>PelletStove</Name>
+  <Description>Wifi Pellet Stove</Description>
+  <Group>MyCode</Group>
+  <Features />
+  <ActivationTime xsi:nil="true" />
+  <TriggerTime>2019-10-20T08:17:26.066376Z</TriggerTime>
+  <Type>CSharp</Type>
+  <IsEnabled>true</IsEnabled>
+</ProgramBlock>
