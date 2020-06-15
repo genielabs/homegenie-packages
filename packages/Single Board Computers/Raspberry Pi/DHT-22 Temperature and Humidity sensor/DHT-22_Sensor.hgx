@@ -37,7 +37,6 @@ while (Program.IsEnabled)
       // data read succesfully
       Program.RaiseEvent("Sensor.Humidity", data.RelativeHumidity.Percent.ToString(CultureInfo.InvariantCulture), "DHT-22 Sensor");
       Program.RaiseEvent("Sensor.Temperature", data.Temperature.DegreesCelsius.ToString(CultureInfo.InvariantCulture), "DHT-22 Sensor");
-      break;
     }
   }
 
