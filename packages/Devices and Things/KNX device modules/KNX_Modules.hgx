@@ -1,21 +1,18 @@
 <?xml version="1.0" encoding="utf-16"?>
 <ProgramBlock xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
-  <ConditionType>OnTrue</ConditionType>
-  <Conditions />
-  <Commands />
-  <ScriptCondition>const string MODULES_DOMAIN = "HomeAutomation.KNX";
-
-Program.AddOption("KnxLocalIp", "", "Local endpoint IP address (optional)", "text");
-Program.AddOption("KnxLocalPort","", "Local endpoint port (optional)", "text");
-Program.AddOption("KnxRemoteIp", "", "Remote endpoint IP address (optional)", "text");
-Program.AddOption("KnxRemotePort","", "Remote endpoint port (optional)", "text");
-
-// Create 5 virtual modules with the domain "HomeAutomation.KNX" and with address from 1 to 5
-Program.AddVirtualModules(MODULES_DOMAIN, "Light", "", 1, 5);
-Program.AddFeature(MODULES_DOMAIN, "Dimmer,Light,Sensor", "KNX.Address", "KNX Address", "text");
-
+  <ScriptSetup>const string MODULES_DOMAIN = "HomeAutomation.KNX";
+Program.Setup(() =&gt; {
+  Program
+    .AddOption("KnxLocalIp", "", "Local endpoint IP address (optional)", "text")
+    .AddOption("KnxLocalPort","", "Local endpoint port (optional)", "text")
+    .AddOption("KnxRemoteIp", "", "Remote endpoint IP address (optional)", "text")
+    .AddOption("KnxRemotePort","", "Remote endpoint port (optional)", "text")
+    // Create 5 virtual modules with the domain "HomeAutomation.KNX" and with address from 1 to 5
+    .AddVirtualModules(MODULES_DOMAIN, "Light", "", 1, 5)
+    .AddFeature(MODULES_DOMAIN, "Dimmer,Light,Sensor", "KNX.Address", "KNX Address", "text");
+});
 Program.Run();
-</ScriptCondition>
+</ScriptSetup>
   <ScriptSource>const string MODULES_DOMAIN = "HomeAutomation.KNX";
 const string EVENT_DESCRIPTION = "KNX Module";
 
@@ -74,24 +71,24 @@ When.WebServiceCallReceived(MODULES_DOMAIN, ( args ) =&gt; {
       // eg. http://&lt;hg_address&gt;/api/HomeAutomation.KNX/&lt;light_number&gt;/Control.On
       case "Control.On":
       knx.Action(knxAddress.Value, true);
-      Program.RaiseEvent(module, "Status.Level", "1", EVENT_DESCRIPTION);
+      module.RaiseEvent("Status.Level", "1", EVENT_DESCRIPTION);
       break;
       // eg. http://&lt;hg_address&gt;/api/HomeAutomation.KNX/&lt;light_number&gt;/Control.Off
       case "Control.Off":
       knx.Action(knxAddress.Value, false);
-      Program.RaiseEvent(module, "Status.Level", "0", EVENT_DESCRIPTION);
+      module.RaiseEvent("Status.Level", "0", EVENT_DESCRIPTION);
       break;
       // eg. http://&lt;hg_address&gt;/api/HomeAutomation.KNX/&lt;light_number&gt;/Control.Toggle
       case "Control.Toggle":
       if (module.Parameter("Status.Level").DecimalValue == 0)
       {
         knx.Action(knxAddress.Value, true);
-        Program.RaiseEvent(module, "Status.Level", "1", EVENT_DESCRIPTION);
+        module.RaiseEvent("Status.Level", "1", EVENT_DESCRIPTION);
       }
       else
       {
         knx.Action(knxAddress.Value, false);
-        Program.RaiseEvent(module, "Status.Level", "0", EVENT_DESCRIPTION);
+        module.RaiseEvent("Status.Level", "0", EVENT_DESCRIPTION);
       }
       break;
     }
@@ -119,8 +116,9 @@ Program.GoBackground();
       <Description>KNX Address</Description>
     </ProgramFeature>
   </Features>
-  <ActivationTime xsi:nil="true" />
-  <TriggerTime xsi:nil="true" />
+  <AutoRestartEnabled>false</AutoRestartEnabled>
+  <ActivationTime>2020-06-15T20:54:13.507738Z</ActivationTime>
+  <TriggerTime>2020-06-15T20:54:14.219676Z</TriggerTime>
   <Type>CSharp</Type>
-  <IsEnabled>false</IsEnabled>
+  <IsEnabled>true</IsEnabled>
 </ProgramBlock>
