@@ -1,33 +1,16 @@
 <?xml version="1.0" encoding="utf-16"?>
-<ProgramBlock xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
-  <ConditionType>OnTrue</ConditionType>
-  <Conditions>
-    <ProgramCondition>
-      <Domain>HomeAutomation.ZWave</Domain>
-      <Target>37</Target>
-      <Property>Sensor.DoorWindow</Property>
-      <ComparisonOperator>Equals</ComparisonOperator>
-      <ComparisonValue>255</ComparisonValue>
-    </ProgramCondition>
-  </Conditions>
-  <Commands>
-    <ProgramCommand>
-      <Domain>HomeAutomation.ZWave</Domain>
-      <Target>4</Target>
-      <CommandString>Control.Off</CommandString>
-      <CommandArguments />
-    </ProgramCommand>
-  </Commands>
-  <ScriptCondition>Program.AddOption("GPIO4",  "OUT", "GPIO04 (IN, OUT or OFF)", "text");
+<ProgramBlock xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <ScriptSetup>
+Program.AddOption("GPIO4",  "OFF", "GPIO04 (IN, OUT or OFF)", "text");
 Program.AddOption("GPIO17", "OFF", "GPIO17 (IN, OUT or OFF)", "text");
 Program.AddOption("GPIO18", "OFF", "GPIO18 (IN, OUT or OFF)", "text");
-Program.AddOption("GPIO21", "OUT", "GPIO21 (IN, OUT or OFF)", "text");
-Program.AddOption("GPIO22", "OUT", "GPIO22 (IN, OUT or OFF)", "text");
-Program.AddOption("GPIO23", "OUT", "GPIO23 (IN, OUT or OFF)", "text");
-Program.AddOption("GPIO24", "OUT", "GPIO24 (IN, OUT or OFF)", "text");
-Program.AddOption("GPIO25", "OUT", "GPIO25 (IN, OUT or OFF)", "text");
+Program.AddOption("GPIO21", "OFF", "GPIO21 (IN, OUT or OFF)", "text");
+Program.AddOption("GPIO22", "OFF", "GPIO22 (IN, OUT or OFF)", "text");
+Program.AddOption("GPIO23", "OFF", "GPIO23 (IN, OUT or OFF)", "text");
+Program.AddOption("GPIO24", "OFF", "GPIO24 (IN, OUT or OFF)", "text");
+Program.AddOption("GPIO25", "OFF", "GPIO25 (IN, OUT or OFF)", "text");
 Program.Run();
-</ScriptCondition>
+</ScriptSetup>
   <ScriptSource>var moduleDomain = "RaspberryPi.Gpio";
 
 var pinMapping = new List&lt;dynamic&gt;();
@@ -59,6 +42,7 @@ for (int p = 0; p &lt; pinMapping.Count; p++)
   if (pc.Direction == PinDirection.Input)
   {
     configuration[p] = new InputPinConfiguration(PinMapping.ToProcessor(pc.Pin));
+    ((InputPinConfiguration)configuration[p]).Reversed = pc.Reversed;
     if (pc.Config.EndsWith("+"))
     {
       ((InputPinConfiguration)configuration[p]).Resistor = PinResistor.PullUp;
@@ -94,9 +78,7 @@ catch
 var pinChanged = new EventHandler&lt;PinStatusEventArgs&gt;((sender, args) =&gt; {
   var address = args.Configuration.Name;
   var module = Modules.InDomain(moduleDomain).WithAddress(address).Get();
-  Program.RaiseEvent(module, "Status.Level", 
-                     args.Enabled == !args.Configuration.Reversed ? "1" : "0",
-                     address);
+  module.RaiseEvent("Status.Level", args.Enabled ? "1" : "0", "Update GPIO Status.Level");
 
 });
 connection.PinStatusChanged += pinChanged;
@@ -113,7 +95,7 @@ for (int p = 0; p &lt; pinMapping.Count; p++)
   var pc = pinMapping[p];
   var address = pc.Address;
   var module = Modules.InDomain(moduleDomain).WithAddress(address).Get();
-  module.Parameter("Status.Level").Value = (connection[address] == !pc.Reversed ? "1" : "0");
+  module.Parameter("Status.Level").Value = (connection[address] ? "1" : "0");
 }
 
 // implement web serice API Control.On, Control.Off, Control.Toggle 
@@ -153,21 +135,22 @@ When.WebServiceCallReceived(moduleDomain, ( args ) =&gt; {
 });
 
 Program.GoBackground();</ScriptSource>
-  <ScriptErrors />
+  <ScriptErrors>[]</ScriptErrors>
   <Domain>HomeAutomation.HomeGenie.Automation</Domain>
   <Address>100</Address>
   <Name>GPIO Modules</Name>
   <Description>Raspberry Pi GPIO mapped to HG modules.
 Each GPIO can be configured as input (IN), output (OUT) or can be disabled (OFF).
 Use IN+ to activate the internal PullUp resistor or IN- to activate the internal PullDown resistor.
-Use !OUT or !IN to Reverse the pin level On = 0 and Off = 1.
-GPIOs configured as IN are mapped to a Sensor module with a Status.Level field displaying current pin level (0, 1).
+Use !OUT or !IN+ or !IN- to Reverse the pin level On = 0 and Off = 1.
+GPIOs configured as IN are mapped to a Sensor module with a Status.Level field displaying current pin level (0, 1) or inverted in case of !IN.
 GPIOs configured as OUT are mapped to a Switch module that can be controlled with on/off commands.
 </Description>
   <Group>Raspberry Pi</Group>
   <Features />
+  <AutoRestartEnabled>false</AutoRestartEnabled>
   <ActivationTime xsi:nil="true" />
-  <TriggerTime>2016-04-16T01:12:51.89715Z</TriggerTime>
+  <TriggerTime xsi:nil="true" />
   <Type>CSharp</Type>
-  <IsEnabled>true</IsEnabled>
+  <IsEnabled>false</IsEnabled>
 </ProgramBlock>
