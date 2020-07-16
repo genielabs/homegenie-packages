@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="utf-16"?>
+<ProgramBlock xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <ConditionType>OnTrue</ConditionType>
+  <Conditions />
+  <Commands />
+  <ScriptCondition>Program.Setup(() =&gt; {
+  // register this "sensor"
+  Program.AddVirtualModules("MTUAutomation.RuleEngineSwitch", "Switch", "mtuautomation/ruleengine/switch", 1, 20);
+  Program.Parameter("LastError").Value = "";
+});
+
+return true;</ScriptCondition>
+  <ScriptSource>/// RuleEngineSwitch = Provide Rule Engines for your scripts
+
+/// Required Dependencies
+/// ServiceRuleEngine
+
+/// Recommanded Dependencies
+///
+
+/// May Use Dependencies
+///
+
+
+int modulenums = 20;
+
+Thread.Sleep(2000);  // Ensure the service is registered before at startup
+
+//dynamic ServiceTools = ProgramDynamicApi.Find("Service/Tools/ServiceTools/v1")("");
+
+String RuleEngineServiceDependecyPath = "Service/Tools/ServiceRuleEngine/v1";
+
+Func&lt;int, ModuleHelper&gt; CntToAddress = (cnt) =&gt; { return Modules.InDomain("MTUAutomation.RuleEngineSwitch").WithAddress(cnt.ToString()).Get(); };
+
+
+// listen for settings
+When.WebServiceCallReceived("MTUAutomation.RuleEngineSwitch", (args) =&gt; {
+
+  string[] reqs = ((string)args).Split('/');
+  try
+  {
+    string nodeid = reqs[1];
+    string instance = "";
+    string command = reqs[2];
+    string parameter = ""; if (reqs.Length &gt; 3) parameter = reqs[3];
+
+    var module = CntToAddress(int.Parse(nodeid));
+    if (module.Exists)
+    {
+      switch(command)
+      {
+        case "SetOptions":
+			{
+              if (reqs.Length &lt; 5)
+					return "{ 'ResponseValue' : 'ERROR', 'ErrorMessage' : 'InvalidNumberOfParams for SetOptions' }";
+                Program.RaiseEvent(module, "RuleEngineContext", reqs[3], ":nopopup:");
+                Program.RaiseEvent(module, "Output", reqs[4], ":nopopup:");
+            }
+            break;
+        case "Control.On":
+        	Program.RaiseEvent(module, "Enabled", "1", "");
+        	break;
+        case "Control.Off":
+        	Program.RaiseEvent(module, "Enabled", "0", "");
+        	break;
+        default:
+        	break;
+      }
+      return "";
+    }
+  } catch (Exception e) { 
+
+    Program.Notify("MTUThermostat module ERROR!", e.Message);
+    return "{ \"ResponseValue\" : \"KO\", \"ErrorMessage\" : \""+e.ToString().Replace("\"", "\\\"")+"\" }";
+  }  	
+
+  return "{ \"ResponseValue\" : \"KO\" }";
+});
+
+
+
+// do the job
+while (Program.IsEnabled)
+{
+  dynamic RuleEngineService = ProgramDynamicApi.Find(RuleEngineServiceDependecyPath)("");
+
+  for(int i = 1; i &lt;= modulenums; i++) {
+    try
+    {
+      var module = CntToAddress(i);
+      if (module.Exists) {
+        if ((module.Parameter("RuleEngineContext").Value == "") ||
+              (module.Parameter("Output").Value == "") ||
+              (module.Parameter("Enabled").Value == "0"))
+            continue;
+
+        var destModule = Modules.WithName(module.Parameter("Output").Value).Get();
+        if (destModule.Exists) {
+          dynamic rule = RuleEngineService.EvaluateRules(module.Parameter("RuleEngineContext").Value);
+          if (rule != null) {
+            if ((rule.Value == 0) &amp;&amp; (destModule.Parameter("Status.Level").Value == "1" )) {
+              destModule.Off();
+              module.Parameter("Status.Level").Value = "0";
+            } else if ((rule.Value &gt; 0) &amp;&amp; (destModule.Parameter("Status.Level").Value == "0" )) {
+              destModule.On();
+              module.Parameter("Status.Level").Value = "1";
+            }
+          }
+        }
+      }
+    }
+    catch(Exception err)
+    {
+      Program.Notify("RuleEngineSwitch Module Crashed "+i.ToString(), err.ToString());
+      Program.Parameter("LastError").Value = err.ToString();
+    }  
+  }
+  //
+  Pause(30);
+}
+  
+</ScriptSource>
+  <ScriptErrors>[]</ScriptErrors>
+  <Domain>HomeAutomation.HomeGenie.Automation</Domain>
+  <Address>1035</Address>
+  <Name>RuleEngineSwitch</Name>
+  <Description>Switch controlled by rules</Description>
+  <Group>MTUAutomation</Group>
+  <Features />
+  <ActivationTime xsi:nil="true" />
+  <TriggerTime>2017-12-28T19:09:38.245648Z</TriggerTime>
+  <Type>CSharp</Type>
+  <IsEnabled>true</IsEnabled>
+</ProgramBlock>

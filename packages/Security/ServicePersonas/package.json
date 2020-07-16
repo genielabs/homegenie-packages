@@ -1,0 +1,25 @@
+{
+    "author": "Matthieu Tudury (MTU)",
+    "version": "v1.0",
+    "title": "Personas Service",
+    "description": "Integrate in homegenie people in your house, in order to create rules based on personas presence",
+    "published": "2017-08-06T00:00:00Z",
+    "sourcecode": "https://github.com/mtudury/homegenie-packages",
+    "homepage": "https://github.com/mtudury/homegenie-packages", 
+	"widgets": [
+        { 
+            "file": "mtuautomation_security_personas.zip",
+            "name":"ServicePersonaWidget",
+            "description": "Allow managing Personas"
+        }
+    ],
+    "programs": [
+        { 
+            "file": "ServicePersonas.hgx",
+            "name":"ServicePersonas",
+            "description": "Integrate in homegenie people in your house, in order to create rules based on personas presence",
+            "uid": "100904",
+            "group": "Services" 
+        }
+    ]
+}

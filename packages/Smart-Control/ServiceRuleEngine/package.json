@@ -1,0 +1,18 @@
+{
+    "author": "Matthieu Tudury (MTU)",
+    "version": "v1.0",
+    "title": "RuleEngine Service",
+    "description": "Provide a rule engine for your programs",
+    "published": "2017-12-10T00:00:00Z",
+    "sourcecode": "https://github.com/mtudury/homegenie-packages",
+    "homepage": "https://github.com/mtudury/homegenie-packages", 
+    "programs": [
+        { 
+            "file": "ServiceRuleEngine.hgx",
+            "name":"ServiceRuleEngine",
+            "description": "Provide a rule engine for your programs, sample usage in README.md file",
+            "uid": "100905",
+            "group": "Services" 
+        }
+    ]
+}

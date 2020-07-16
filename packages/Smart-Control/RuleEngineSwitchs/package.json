@@ -1,0 +1,18 @@
+{
+    "author": "Matthieu Tudury (MTU)",
+    "version": "v1.0",
+    "title": "RuleEngine Switchs",
+    "description": "Allow to control switch by rules, requires ServiceRuleEngine Switch",
+    "published": "2017-12-30T00:00:00Z",
+    "sourcecode": "https://github.com/mtudury/homegenie-packages",
+    "homepage": "https://github.com/mtudury/homegenie-packages", 
+    "programs": [
+        { 
+            "file": "RuleEngineSwitchs.hgx",
+            "name":"RuleEngineSwitchs",
+            "description": "Switch controlled by rules, requires ServiceRuleEngine Switch",
+            "uid": "100906",
+            "group": "Services"
+        }
+    ]
+}
